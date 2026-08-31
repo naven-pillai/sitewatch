@@ -1,5 +1,11 @@
-# sitewatch domain list — one per line, # for comments
-# Bare domains get https:// added. Full URLs (https://x.com/health) also work.
+# sitewatch domain list — one entry per line, # for comments
+#
+# Bare domains get https:// added. Full URLs work too.
+# Options after the entry:
+#   expect="text"  body must contain this string
+#   noseo          skip robots.txt and sitemap checks
+#   nowww          skip the www/apex twin check
+#   nordap         skip the domain registration lookup
 
 kerja-ai.com
 kerja-remote.com
@@ -9,3 +15,25 @@ businessai.my
 magnesmarketing.com
 navenpillai.com
 stmarkscozyhome.com
+
+# --- Health endpoints -------------------------------------------------------
+# A homepage 200 can be served from the CDN edge straight through a database
+# outage. These routes run a real Postgres read and return 503 when it fails,
+# so they catch what the checks above structurally cannot.
+#
+# The routes exist in each repo but are NOT deployed yet. Uncomment each line
+# once that site has shipped, or sitewatch will report a 404 as an outage.
+#
+# Per-domain checks (robots, www, registration) are already covered by the
+# homepage entry above, so these skip them.
+
+# https://kerja-ai.com/api/health           noseo nowww nordap expect='"status":"ok"'
+# https://kerja-remote.com/api/health       noseo nowww nordap expect='"status":"ok"'
+# https://agencies.asia/api/health          noseo nowww nordap expect='"status":"ok"'
+# https://businessai.my/api/health          noseo nowww nordap expect='"status":"ok"'
+# https://magnesmarketing.com/api/health    noseo nowww nordap expect='"status":"ok"'
+# https://navenpillai.com/api/health        noseo nowww nordap expect='"status":"ok"'
+# https://stmarkscozyhome.com/api/health    noseo nowww nordap expect='"status":"ok"'
+
+# techpartner.my is a static site with no server runtime, so it has no health
+# endpoint — its homepage check already covers everything there is to check.

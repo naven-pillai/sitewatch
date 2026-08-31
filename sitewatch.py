@@ -83,10 +83,15 @@ def parse_entry(line: str) -> dict:
             for p in parts[1:]}
 
     url = target if "://" in target else f"https://{target}"
-    host = urlparse(url).hostname or target
+    parsed = urlparse(url)
+    host = parsed.hostname or target
+    path = parsed.path.rstrip("/")
     return {
         "url": url,
         "host": host,
+        # Two entries can share a host (site root plus a health endpoint), so
+        # the display name — which is also the history key — includes the path.
+        "label": host + path,
         "expect": opts.get("expect") if isinstance(opts.get("expect"), str) else None,
         "seo": "noseo" not in opts,
         "www": "nowww" not in opts,
@@ -409,7 +414,8 @@ def check(entry: dict, timeout: float, quick: bool, rdap_cache: dict) -> dict:
 
     redirected = http["final_url"] and http["final_url"].rstrip("/") != url.rstrip("/")
     row = {
-        "domain": host,
+        "domain": entry["label"],
+        "host": host,
         "url": url,
         "code": http["code"],
         "ms": http["ms"] if http["code"] else None,

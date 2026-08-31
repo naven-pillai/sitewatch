@@ -59,6 +59,28 @@ example.com nordap                    # skip domain registration lookup
 RDAP has no coverage for `.my` — MYNIC publishes none — so those domains report
 "not published" rather than a false all-clear. `.com` and `.asia` work.
 
+## Health endpoints
+
+`/api/health` exists in each of the seven Next.js apps. It runs one real
+Postgres read with the publishable/anon key (so RLS still applies), returns
+**200** with `{"status":"ok"}` when the read path works and **503** when it
+doesn't, and is never cached — a cached "ok" would keep reporting green through
+an incident.
+
+```json
+{ "status": "ok", "service": "kerja-ai", "database": "ok",
+  "latencyMs": 283, "checkedAt": "2026-09-01T01:56:41.018Z" }
+```
+
+The query is bounded by a 5-second `AbortSignal.timeout`, so a hung database
+returns 503 instead of holding the request open.
+
+The entries are present but commented out in `domains.txt` — uncomment each one
+after that site deploys, or a 404 will be reported as an outage.
+
+`techpartner.my` is a static site with no server runtime, so it has no health
+endpoint; its homepage check already covers everything there is to check.
+
 ## Alerting
 
 One notification per incident, not one per check. A site down for a day sends

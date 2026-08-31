@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-31T17:50:39Z",
+  "generated_at": "2026-08-31T18:04:05Z",
   "total": 8,
   "counts": {
     "up": 6,
@@ -10,9 +10,10 @@
   "sites": [
     {
       "domain": "kerja-remote.com",
+      "host": "kerja-remote.com",
       "url": "https://kerja-remote.com",
       "code": 200,
-      "ms": 138,
+      "ms": 153,
       "final_url": null,
       "error": null,
       "ssl_days_left": 36,
@@ -45,9 +46,10 @@
     },
     {
       "domain": "techpartner.my",
+      "host": "techpartner.my",
       "url": "https://techpartner.my",
       "code": 200,
-      "ms": 108,
+      "ms": 111,
       "final_url": null,
       "error": null,
       "ssl_days_left": 39,
@@ -80,9 +82,10 @@
     },
     {
       "domain": "agencies.asia",
+      "host": "agencies.asia",
       "url": "https://agencies.asia",
       "code": 200,
-      "ms": 118,
+      "ms": 156,
       "final_url": null,
       "error": null,
       "ssl_days_left": 42,
@@ -113,6 +116,7 @@
     },
     {
       "domain": "businessai.my",
+      "host": "businessai.my",
       "url": "https://businessai.my",
       "code": 200,
       "ms": 115,
@@ -146,9 +150,10 @@
     },
     {
       "domain": "kerja-ai.com",
+      "host": "kerja-ai.com",
       "url": "https://kerja-ai.com",
       "code": 200,
-      "ms": 102,
+      "ms": 464,
       "final_url": null,
       "error": null,
       "ssl_days_left": 38,
@@ -179,9 +184,10 @@
     },
     {
       "domain": "magnesmarketing.com",
+      "host": "magnesmarketing.com",
       "url": "https://magnesmarketing.com",
       "code": 200,
-      "ms": 116,
+      "ms": 113,
       "final_url": null,
       "error": null,
       "ssl_days_left": 64,
@@ -212,9 +218,10 @@
     },
     {
       "domain": "navenpillai.com",
+      "host": "navenpillai.com",
       "url": "https://navenpillai.com",
       "code": 200,
-      "ms": 107,
+      "ms": 397,
       "final_url": null,
       "error": null,
       "ssl_days_left": 41,
@@ -245,9 +252,10 @@
     },
     {
       "domain": "stmarkscozyhome.com",
+      "host": "stmarkscozyhome.com",
       "url": "https://stmarkscozyhome.com",
       "code": 200,
-      "ms": 281,
+      "ms": 416,
       "final_url": "https://www.stmarkscozyhome.com/en",
       "error": null,
       "ssl_days_left": 75,
