@@ -1,6 +1,6 @@
 # sitewatch
 
-Uptime and TLS-certificate monitoring for nine domains, run by GitHub Actions
+Uptime and TLS-certificate monitoring for a list of domains, run by GitHub Actions
 every 30 minutes. No account, no third-party service, no cost.
 
 ```
@@ -57,4 +57,6 @@ Add a line to `domains.txt`. Bare domains get `https://` prepended; full URLs
 work too, so `https://kerja-ai.com/api/health` is a valid entry if you would
 rather check a health endpoint than the homepage.
 
-History is capped at the most recent 500 runs — about ten days.
+History is capped at the most recent 500 runs — about ten days. Removing a
+domain from `domains.txt` also drops it from `history.json` on the next run,
+so the dashboard's median line always compares the same set of sites.

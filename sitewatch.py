@@ -313,6 +313,15 @@ def write_output(snapshot: dict, out_dir: Path) -> None:
         },
     })
     history["runs"] = history["runs"][-HISTORY_LIMIT:]
+
+    # Drop domains that have left domains.txt. Otherwise the dashboard's median
+    # line compares runs over different sets of sites, and removing a slow site
+    # reads as everything suddenly getting faster.
+    current = {s["domain"] for s in snapshot["sites"]}
+    for run_entry in history["runs"]:
+        run_entry["sites"] = {d: v for d, v in run_entry.get("sites", {}).items()
+                              if d in current}
+    history["runs"] = [r for r in history["runs"] if r["sites"]]
     hist_path.write_text(json.dumps(history, separators=(",", ":")) + "\n")
 
 
