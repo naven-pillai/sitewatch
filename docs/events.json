@@ -1,0 +1,19 @@
+{
+  "events": [
+    {
+      "t": "2026-08-31T17:44:56Z",
+      "domain": "kerja-remote.com",
+      "from": "up",
+      "to": "warn",
+      "note": "www.kerja-remote.com is broken \u2014 TLS certificate rejected \u2014 certificate has expired"
+    },
+    {
+      "t": "2026-08-31T17:46:05Z",
+      "domain": "techpartner.my",
+      "from": "up",
+      "to": "warn",
+      "note": "sitemap unreachable at techpartner.asia"
+    }
+  ],
+  "notified": {}
+}

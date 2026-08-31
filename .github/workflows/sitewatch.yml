@@ -25,43 +25,62 @@ jobs:
 
       - run: pip install requests
 
-      # --no-fail so a downed site still writes data and commits the dashboard.
-      # The job is failed deliberately in the last step instead.
+      # Never fails here: the data has to be written and committed even when a
+      # site is down. Whether this run counts as a failure is decided last.
       - name: Run checks
-        run: python sitewatch.py --out docs --no-fail
+        run: python sitewatch.py --out docs --alert-payload alert.json --fail-on never
 
       - name: Commit dashboard data
         run: |
           git config user.name  "sitewatch[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/status.json docs/history.json
+          git add docs/status.json docs/history.json docs/events.json docs/rdap-cache.json
           if git diff --staged --quiet; then
             echo "nothing changed"
           else
             git commit -m "sitewatch: status $(date -u +'%Y-%m-%d %H:%M UTC') [skip ci]"
+            git pull --rebase --autostash
             git push
           fi
 
-      - name: Upload result artifact
+      # Optional. Add a SITEWATCH_WEBHOOK_URL secret (Slack, Discord or
+      # Mattermost incoming webhook) and alerts arrive in seconds instead of
+      # waiting on GitHub's failed-run email.
+      - name: Send alert to webhook
+        if: hashFiles('alert.json') != ''
+        env:
+          WEBHOOK: ${{ secrets.SITEWATCH_WEBHOOK_URL }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "No SITEWATCH_WEBHOOK_URL secret set — skipping."
+            exit 0
+          fi
+          curl -sS -X POST -H 'Content-Type: application/json' \
+               --data @alert.json "$WEBHOOK" > /dev/null
+          echo "Alert posted."
+
+      - name: Upload snapshot
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: sitewatch-result
-          path: docs/status.json
+          path: |
+            docs/status.json
+            alert.json
           retention-days: 7
+          if-no-files-found: warn
 
-      # If any site is down the job fails, and GitHub emails you
-      # about the failed scheduled run.
-      - name: Fail if any site is down
+      # Fails on a new outage, and again every 12 hours while one continues —
+      # not on all 48 runs of a bad day, which is how alerting gets ignored.
+      # Recoveries and warnings notify without failing the run.
+      - name: Fail on outage
+        if: hashFiles('alert.json') != ''
         run: |
           python - <<'PY'
           import json, sys
-          s = json.load(open("docs/status.json"))
-          bad = [x for x in s["sites"] if x["status"] == "down"]
-          for x in bad:
-              print(f"::error title=Site down::{x['domain']} — {x['note']}")
-          for x in (x for x in s["sites"] if x["status"] == "warn"):
-              print(f"::warning title=Needs attention::{x['domain']} — {x['note']}")
-          print(f"{s['counts']['up']} up, {s['counts']['warn']} warning, {s['counts']['down']} down")
-          sys.exit(2 if bad else 0)
+          a = json.load(open("alert.json"))
+          for line in a["alerts"]:
+              level = "error" if line.startswith("DOWN") else "warning"
+              print(f"::{level} title=sitewatch::{line}")
+          sys.exit(1 if a["severity"] == "down" else 0)
           PY
