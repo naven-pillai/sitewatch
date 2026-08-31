@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Uptime and TLS certificate status for nine sites, rechecked every 30 minutes.">
+<title>sitewatch</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+
+<style>
+  /* ---- tokens: light is the complete set ------------------------------- */
+  :root {
+    color-scheme: light;
+    --ground:      #eef1f5;
+    --surface:     #ffffff;
+    --surface-2:   #f6f8fa;
+    --hairline:    #dbe1e8;
+    --hairline-2:  #eaeef3;
+    --ink:         #141c24;
+    --ink-2:       #47555f;
+    --ink-3:       #6d7d8b;
+
+    --accent:      #1b4e6b;
+    --accent-soft: #e4eef4;
+
+    --up:          #0f7a56;
+    --up-soft:     #e2f2ea;
+    --warn:        #c08a00;
+    --warn-soft:   #f8efd8;
+    --down:        #c22e28;
+    --down-soft:   #fae7e5;
+
+    --shadow: 0 1px 2px rgba(20, 28, 36, .05), 0 8px 24px -16px rgba(20, 28, 36, .28);
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground:      #0e141a;
+      --surface:     #151d25;
+      --surface-2:   #1b242d;
+      --hairline:    #26313c;
+      --hairline-2:  #1f2831;
+      --ink:         #e3eaf1;
+      --ink-2:       #a9b8c5;
+      --ink-3:       #7d8d9c;
+
+      --accent:      #6fb3d9;
+      --accent-soft: #17303f;
+
+      --up:          #2fcb8e;
+      --up-soft:     #10322a;
+      --warn:        #f0c24a;
+      --warn-soft:   #33290f;
+      --down:        #ff5f52;
+      --down-soft:   #3a1a1a;
+
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 28px -18px rgba(0, 0, 0, .9);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground:      #0e141a;
+    --surface:     #151d25;
+    --surface-2:   #1b242d;
+    --hairline:    #26313c;
+    --hairline-2:  #1f2831;
+    --ink:         #e3eaf1;
+    --ink-2:       #a9b8c5;
+    --ink-3:       #7d8d9c;
+
+    --accent:      #6fb3d9;
+    --accent-soft: #17303f;
+
+    --up:          #2fcb8e;
+    --up-soft:     #10322a;
+    --warn:        #f0c24a;
+    --warn-soft:   #33290f;
+    --down:        #ff5f52;
+    --down-soft:   #3a1a1a;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 28px -18px rgba(0, 0, 0, .9);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 22px 72px; }
+
+  .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  .eyebrow {
+    font-size: 11px; font-weight: 600; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+
+  /* ---- topbar ---------------------------------------------------------- */
+  .topbar {
+    display: flex; align-items: center; gap: 14px;
+    flex-wrap: wrap; margin-bottom: 22px;
+  }
+  .brand { display: flex; align-items: baseline; gap: 9px; margin-right: auto; }
+  .brand h1 {
+    margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -.015em;
+  }
+  .brand .tag { font-size: 12.5px; color: var(--ink-3); }
+
+  .beacon {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--up); align-self: center;
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--up) 55%, transparent);
+    animation: ping 2.6s ease-out infinite;
+  }
+  .beacon[data-state="warn"] { background: var(--warn); box-shadow: 0 0 0 0 color-mix(in srgb, var(--warn) 55%, transparent); }
+  .beacon[data-state="down"] { background: var(--down); box-shadow: 0 0 0 0 color-mix(in srgb, var(--down) 55%, transparent); }
+  @keyframes ping {
+    0%   { box-shadow: 0 0 0 0 currentColor; }
+    70%  { box-shadow: 0 0 0 7px transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
+  }
+
+  .btn {
+    font: inherit; font-size: 13px; font-weight: 500;
+    color: var(--ink-2); background: var(--surface);
+    border: 1px solid var(--hairline); border-radius: 7px;
+    padding: 6px 11px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .btn:hover { color: var(--ink); border-color: var(--ink-3); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .source {
+    font-size: 11.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+    padding: 4px 9px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .source[data-live="false"] { background: var(--warn-soft); color: var(--warn); }
+
+  /* ---- verdict --------------------------------------------------------- */
+  .verdict {
+    background: var(--surface); border: 1px solid var(--hairline);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 22px 24px;
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+    gap: 26px; align-items: center;
+  }
+  .verdict h2 {
+    margin: 6px 0 0; font-size: 27px; font-weight: 600;
+    letter-spacing: -.02em; line-height: 1.2; text-wrap: balance;
+  }
+  .verdict .sub { margin: 8px 0 0; color: var(--ink-2); font-size: 14px; }
+  .verdict .sub b { font-weight: 600; color: var(--ink); }
+
+  .trend { min-width: 0; }
+  .trend-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 10px; margin-bottom: 6px;
+  }
+  .trend svg { display: block; width: 100%; height: 62px; overflow: visible; }
+
+  /* ---- readouts -------------------------------------------------------- */
+  .readouts {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px; margin: 12px 0 26px;
+  }
+  .tile {
+    background: var(--surface); border: 1px solid var(--hairline);
+    border-radius: var(--radius); padding: 14px 16px 15px;
+  }
+  .tile .figure {
+    font-size: 27px; font-weight: 600; letter-spacing: -.02em;
+    line-height: 1.15; margin-top: 7px;
+  }
+  .tile .figure .unit { font-size: 15px; font-weight: 500; color: var(--ink-3); }
+  .tile .note { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; }
+
+  /* ---- controls -------------------------------------------------------- */
+  .controls {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .search {
+    flex: 1 1 220px; min-width: 0;
+    font: inherit; font-size: 14px; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--hairline);
+    border-radius: 7px; padding: 7px 12px;
+  }
+  .search::placeholder { color: var(--ink-3); }
+  .search:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+  .btn[aria-pressed="true"] {
+    background: var(--accent-soft); color: var(--accent); border-color: transparent;
+  }
+  select.btn { padding-right: 8px; }
+
+  /* ---- ledger ---------------------------------------------------------- */
+  .ledger {
+    background: var(--surface); border: 1px solid var(--hairline);
+    border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+  }
+  .lrow {
+    display: grid;
+    grid-template-columns: 104px minmax(180px, 1fr) 178px 128px 132px;
+    gap: 18px; align-items: center;
+    padding: 13px 20px;
+    border-top: 1px solid var(--hairline-2);
+  }
+  .lhead {
+    border-top: 0; padding-top: 11px; padding-bottom: 11px;
+    background: var(--surface-2);
+  }
+  .lhead > * { font-size: 11px; font-weight: 600; letter-spacing: .09em;
+               text-transform: uppercase; color: var(--ink-3); }
+  .lrow.site:hover { background: var(--surface-2); }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase;
+    padding: 4px 9px 4px 7px; border-radius: 999px;
+  }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+  .chip[data-s="up"]   { color: var(--up);   background: var(--up-soft); }
+  .chip[data-s="warn"] { color: var(--warn); background: var(--warn-soft); }
+  .chip[data-s="down"] { color: var(--down); background: var(--down-soft); }
+
+  .site-name { min-width: 0; }
+  .site-name a {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 14px; font-weight: 500; color: var(--ink);
+    text-decoration: none; border-bottom: 1px solid transparent;
+  }
+  .site-name a:hover { border-bottom-color: var(--ink-3); }
+  .site-name a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .site-note {
+    font-size: 12.5px; color: var(--ink-3); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .site-note[data-s="down"] { color: var(--down); }
+  .site-note[data-s="warn"] { color: var(--warn); }
+
+  .strip { display: flex; align-items: flex-end; gap: 2px; height: 26px; }
+  .bar { width: 4px; border-radius: 2px; flex: none; background: var(--hairline); }
+  .bar[data-s="up"]   { background: var(--up); }
+  .bar[data-s="warn"] { background: var(--warn); }
+  .bar[data-s="down"] { background: var(--down); }
+  .bar:hover { filter: brightness(1.15); }
+  .strip-empty { font-size: 12px; color: var(--ink-3); align-self: center; }
+  .latency .val.muted { color: var(--ink-3); }
+
+  .latency { display: flex; align-items: center; gap: 9px; }
+  .latency .val { font-size: 13.5px; font-weight: 500; white-space: nowrap; }
+  .latency svg { display: block; overflow: visible; }
+
+  .cert { min-width: 0; }
+  .cert-top {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 8px; font-size: 13px; margin-bottom: 5px;
+  }
+  .cert-top .days { font-weight: 500; }
+  .cert-top .issuer {
+    font-size: 11.5px; color: var(--ink-3);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .meter { height: 4px; border-radius: 2px; background: var(--hairline); overflow: hidden; }
+  .meter > i { display: block; height: 100%; border-radius: 2px; background: var(--up); }
+  .meter[data-s="warn"] > i { background: var(--warn); }
+  .meter[data-s="down"] > i { background: var(--down); }
+  .cert.none { color: var(--ink-3); font-size: 13px; }
+
+  .empty { padding: 34px 20px; text-align: center; color: var(--ink-3); font-size: 14px; }
+
+  /* ---- footer ---------------------------------------------------------- */
+  footer {
+    margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--hairline);
+    display: flex; gap: 18px; flex-wrap: wrap;
+    font-size: 12.5px; color: var(--ink-3);
+  }
+  footer b { font-weight: 600; color: var(--ink-2); }
+
+  /* ---- tooltip --------------------------------------------------------- */
+  #tip {
+    position: fixed; z-index: 40; pointer-events: none;
+    background: var(--ink); color: var(--ground);
+    border-radius: 6px; padding: 6px 9px;
+    font-size: 12px; line-height: 1.45; white-space: nowrap;
+    opacity: 0; transition: opacity .12s; box-shadow: var(--shadow);
+  }
+  #tip[data-show="true"] { opacity: 1; }
+  #tip .k { opacity: .7; }
+
+  @media (max-width: 900px) {
+    .verdict { grid-template-columns: minmax(0, 1fr); }
+    .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .lrow { grid-template-columns: 96px minmax(0, 1fr) 140px; }
+    .lrow > .latency, .lrow > .cert { grid-column: 2 / -1; }
+    .lhead { display: none; }
+    .lrow.site { row-gap: 10px; padding: 15px 16px; }
+  }
+  @media (max-width: 560px) {
+    .wrap { padding: 20px 14px 56px; }
+    .lrow { grid-template-columns: minmax(0, 1fr); }
+    .lrow > * { grid-column: 1 / -1 !important; }
+    .verdict h2 { font-size: 23px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <span class="beacon" id="beacon"></span>
+      <h1>sitewatch</h1>
+      <span class="tag" id="tag">checked every 30 minutes</span>
+    </div>
+    <span class="source" id="source">live</span>
+    <button class="btn" id="refresh" type="button">Refresh</button>
+    <button class="btn" id="theme" type="button" aria-label="Switch theme">Theme</button>
+  </div>
+
+  <section class="verdict">
+    <div>
+      <p class="eyebrow" id="checked">—</p>
+      <h2 id="headline">Loading checks…</h2>
+      <p class="sub" id="subline"></p>
+    </div>
+    <div class="trend">
+      <div class="trend-head">
+        <span class="eyebrow">Median response</span>
+        <span class="eyebrow tnum" id="trend-range"></span>
+      </div>
+      <div id="trend"></div>
+    </div>
+  </section>
+
+  <div class="readouts" id="readouts"></div>
+
+  <div class="controls">
+    <input class="search" id="q" type="search" placeholder="Filter by domain…" aria-label="Filter by domain">
+    <button class="btn" id="issues" type="button" aria-pressed="false">Only issues</button>
+    <select class="btn" id="sort" aria-label="Sort sites">
+      <option value="severity">Sort: worst first</option>
+      <option value="name">Sort: domain</option>
+      <option value="latency">Sort: slowest</option>
+      <option value="cert">Sort: cert expiring</option>
+    </select>
+  </div>
+
+  <div class="ledger">
+    <div class="lrow lhead">
+      <div>Status</div><div>Site</div><div>Recent checks</div><div>Response</div><div>Certificate</div>
+    </div>
+    <div id="rows"></div>
+  </div>
+
+  <footer>
+    <span>Down means the check failed outright. <b>Warning</b> means it answered but something needs a look — a bot-block, an expiring certificate, or a slow reply.</span>
+    <span id="runs-note"></span>
+  </footer>
+</div>
+
+<div id="tip" role="tooltip"></div>
+
+<script id="bootstrap" type="application/json">{"status":{"generated_at":"2026-08-31T17:28:31Z","total":9,"counts":{"up":7,"warn":0,"down":2},"overall":"down","sites":[{"domain":"martechville.com","url":"https://martechville.com","status":"down","note":"connection timed out","code":null,"ms":15005,"final_url":null,"ssl_days_left":null,"ssl_expires":null,"ssl_issuer":null,"error":"connection timed out"},{"domain":"techvendor.my","url":"https://techvendor.my","status":"down","note":"DNS did not resolve","code":null,"ms":0,"final_url":null,"ssl_days_left":null,"ssl_expires":null,"ssl_issuer":null,"error":"DNS did not resolve"},{"domain":"agencies.asia","url":"https://agencies.asia","status":"up","note":"ok","code":200,"ms":179,"final_url":null,"ssl_days_left":42,"ssl_expires":"2026-10-13T04:33:47Z","ssl_issuer":"Let's Encrypt","error":null},{"domain":"businessai.my","url":"https://businessai.my","status":"up","note":"ok","code":200,"ms":100,"final_url":null,"ssl_days_left":72,"ssl_expires":"2026-11-12T10:57:29Z","ssl_issuer":"Let's Encrypt","error":null},{"domain":"kerja-ai.com","url":"https://kerja-ai.com","status":"up","note":"ok","code":200,"ms":110,"final_url":null,"ssl_days_left":38,"ssl_expires":"2026-10-09T09:45:36Z","ssl_issuer":"Let's Encrypt","error":null},{"domain":"kerja-remote.com","url":"https://kerja-remote.com","status":"up","note":"ok","code":200,"ms":318,"final_url":null,"ssl_days_left":36,"ssl_expires":"2026-10-07T11:42:22Z","ssl_issuer":"Let's Encrypt","error":null},{"domain":"magnesmarketing.com","url":"https://magnesmarketing.com","status":"up","note":"ok","code":200,"ms":99,"final_url":null,"ssl_days_left":64,"ssl_expires":"2026-11-04T02:40:02Z","ssl_issuer":"Let's Encrypt","error":null},{"domain":"navenpillai.com","url":"https://navenpillai.com","status":"up","note":"ok","code":200,"ms":134,"final_url":null,"ssl_days_left":41,"ssl_expires":"2026-10-12T15:19:20Z","ssl_issuer":"Let's Encrypt","error":null},{"domain":"stmarkscozyhome.com","url":"https://stmarkscozyhome.com","status":"up","note":"ok","code":200,"ms":352,"final_url":"https://www.stmarkscozyhome.com/en","ssl_days_left":75,"ssl_expires":"2026-11-15T06:17:23Z","ssl_issuer":"Let's Encrypt","error":null}]},"history":{"runs":[{"t":"2026-08-31T17:19:39Z","sites":{"martechville.com":{"s":"down","ms":15007,"c":null},"techvendor.my":{"s":"down","ms":0,"c":null},"agencies.asia":{"s":"up","ms":181,"c":200},"businessai.my":{"s":"up","ms":117,"c":200},"kerja-ai.com":{"s":"up","ms":438,"c":200},"kerja-remote.com":{"s":"up","ms":268,"c":200},"magnesmarketing.com":{"s":"up","ms":167,"c":200},"navenpillai.com":{"s":"up","ms":428,"c":200},"stmarkscozyhome.com":{"s":"up","ms":423,"c":200}}},{"t":"2026-08-31T17:23:06Z","sites":{"martechville.com":{"s":"down","ms":15004,"c":null},"techvendor.my":{"s":"down","ms":1,"c":null},"agencies.asia":{"s":"up","ms":177,"c":200},"businessai.my":{"s":"up","ms":111,"c":200},"kerja-ai.com":{"s":"up","ms":415,"c":200},"kerja-remote.com":{"s":"up","ms":237,"c":200},"magnesmarketing.com":{"s":"up","ms":124,"c":200},"navenpillai.com":{"s":"up","ms":414,"c":200},"stmarkscozyhome.com":{"s":"up","ms":351,"c":200}}},{"t":"2026-08-31T17:23:51Z","sites":{"martechville.com":{"s":"down","ms":15006,"c":null},"techvendor.my":{"s":"down","ms":0,"c":null},"agencies.asia":{"s":"up","ms":205,"c":200},"businessai.my":{"s":"up","ms":108,"c":200},"kerja-ai.com":{"s":"up","ms":368,"c":200},"kerja-remote.com":{"s":"up","ms":160,"c":200},"magnesmarketing.com":{"s":"up","ms":115,"c":200},"navenpillai.com":{"s":"up","ms":406,"c":200},"stmarkscozyhome.com":{"s":"up","ms":627,"c":200}}},{"t":"2026-08-31T17:24:36Z","sites":{"martechville.com":{"s":"down","ms":15004,"c":null},"techvendor.my":{"s":"down","ms":0,"c":null},"agencies.asia":{"s":"up","ms":142,"c":200},"businessai.my":{"s":"up","ms":108,"c":200},"kerja-ai.com":{"s":"up","ms":122,"c":200},"kerja-remote.com":{"s":"up","ms":174,"c":200},"magnesmarketing.com":{"s":"up","ms":157,"c":200},"navenpillai.com":{"s":"up","ms":185,"c":200},"stmarkscozyhome.com":{"s":"up","ms":390,"c":200}}},{"t":"2026-08-31T17:25:22Z","sites":{"martechville.com":{"s":"down","ms":15005,"c":null},"techvendor.my":{"s":"down","ms":0,"c":null},"agencies.asia":{"s":"up","ms":147,"c":200},"businessai.my":{"s":"up","ms":126,"c":200},"kerja-ai.com":{"s":"up","ms":398,"c":200},"kerja-remote.com":{"s":"up","ms":178,"c":200},"magnesmarketing.com":{"s":"up","ms":111,"c":200},"navenpillai.com":{"s":"up","ms":405,"c":200},"stmarkscozyhome.com":{"s":"up","ms":377,"c":200}}},{"t":"2026-08-31T17:26:07Z","sites":{"martechville.com":{"s":"down","ms":15004,"c":null},"techvendor.my":{"s":"down","ms":0,"c":null},"agencies.asia":{"s":"up","ms":156,"c":200},"businessai.my":{"s":"up","ms":112,"c":200},"kerja-ai.com":{"s":"up","ms":110,"c":200},"kerja-remote.com":{"s":"up","ms":155,"c":200},"magnesmarketing.com":{"s":"up","ms":104,"c":200},"navenpillai.com":{"s":"up","ms":127,"c":200},"stmarkscozyhome.com":{"s":"up","ms":360,"c":200}}},{"t":"2026-08-31T17:26:52Z","sites":{"martechville.com":{"s":"down","ms":15005,"c":null},"techvendor.my":{"s":"down","ms":0,"c":null},"agencies.asia":{"s":"up","ms":180,"c":200},"businessai.my":{"s":"up","ms":148,"c":200},"kerja-ai.com":{"s":"up","ms":374,"c":200},"kerja-remote.com":{"s":"up","ms":164,"c":200},"magnesmarketing.com":{"s":"up","ms":90,"c":200},"navenpillai.com":{"s":"up","ms":410,"c":200},"stmarkscozyhome.com":{"s":"up","ms":305,"c":200}}},{"t":"2026-08-31T17:28:31Z","sites":{"martechville.com":{"s":"down","ms":15005,"c":null},"techvendor.my":{"s":"down","ms":0,"c":null},"agencies.asia":{"s":"up","ms":179,"c":200},"businessai.my":{"s":"up","ms":100,"c":200},"kerja-ai.com":{"s":"up","ms":110,"c":200},"kerja-remote.com":{"s":"up","ms":318,"c":200},"magnesmarketing.com":{"s":"up","ms":99,"c":200},"navenpillai.com":{"s":"up","ms":134,"c":200},"stmarkscozyhome.com":{"s":"up","ms":352,"c":200}}}]}}</script>
+
+<script>
+(() => {
+  "use strict";
+
+  const LABEL = { up: "Up", warn: "Warning", down: "Down" };
+  const RANK  = { down: 0, warn: 1, up: 2 };
+  const SLOTS = 28;          // most recent checks drawn per site
+  const CERT_CYCLE = 90;     // Let's Encrypt issues 90-day certs; meter is days/90
+
+  const state = { status: null, history: { runs: [] }, live: false,
+                  q: "", onlyIssues: false, sort: "severity" };
+
+  const $  = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  /* ---- theme --------------------------------------------------------- */
+  const forced = new URLSearchParams(location.search).get("theme");
+  if (forced === "dark" || forced === "light") {
+    document.documentElement.setAttribute("data-theme", forced);
+  } else {
+    try {
+      const saved = localStorage.getItem("sitewatch-theme");
+      if (saved) document.documentElement.setAttribute("data-theme", saved);
+    } catch (e) { /* storage blocked; system theme still applies */ }
+  }
+
+  $("#theme").addEventListener("click", () => {
+    const root = document.documentElement;
+    const dark = root.getAttribute("data-theme")
+      ? root.getAttribute("data-theme") === "dark"
+      : matchMedia("(prefers-color-scheme: dark)").matches;
+    const next = dark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("sitewatch-theme", next); } catch (e) { /* ignore */ }
+    render();
+  });
+
+  /* ---- tooltip ------------------------------------------------------- */
+  const tip = $("#tip");
+  function showTip(evt, html) {
+    tip.innerHTML = html;
+    tip.dataset.show = "true";
+    const pad = 12, r = tip.getBoundingClientRect();
+    let x = evt.clientX + pad, y = evt.clientY - r.height - pad;
+    if (x + r.width > innerWidth - 8) x = evt.clientX - r.width - pad;
+    if (y < 8) y = evt.clientY + pad;
+    tip.style.left = x + "px";
+    tip.style.top = y + "px";
+  }
+  const hideTip = () => { tip.dataset.show = "false"; };
+  document.addEventListener("scroll", hideTip, true);
+
+  /* ---- time ---------------------------------------------------------- */
+  function ago(iso) {
+    const secs = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (!isFinite(secs)) return "—";
+    if (secs < 90) return "just now";
+    const mins = Math.round(secs / 60);
+    if (mins < 60) return mins + " min ago";
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return hrs + (hrs === 1 ? " hour ago" : " hours ago");
+    const days = Math.round(hrs / 24);
+    return days + (days === 1 ? " day ago" : " days ago");
+  }
+  const clock = (iso) => new Date(iso).toLocaleString(undefined,
+    { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+  /* ---- data ---------------------------------------------------------- */
+  async function load() {
+    try {
+      const [s, h] = await Promise.all([
+        fetch("./status.json",  { cache: "no-store" }).then((r) => r.ok ? r.json() : Promise.reject(r.status)),
+        fetch("./history.json", { cache: "no-store" }).then((r) => r.ok ? r.json() : { runs: [] })
+                                                      .catch(() => ({ runs: [] })),
+      ]);
+      state.status = s;
+      state.history = h && Array.isArray(h.runs) ? h : { runs: [] };
+      state.live = true;
+    } catch (e) {
+      // No server to fetch from (opened as a file, or published standalone):
+      // fall back to the snapshot baked into the page and say so.
+      const boot = JSON.parse($("#bootstrap").textContent);
+      state.status = boot.status;
+      state.history = boot.history && Array.isArray(boot.history.runs) ? boot.history : { runs: [] };
+      state.live = false;
+    }
+    render();
+  }
+
+  const runsFor = (domain) => state.history.runs
+    .map((r) => ({ t: r.t, ...(r.sites || {})[domain] }))
+    .filter((r) => r.s);
+
+  /* ---- charts -------------------------------------------------------- */
+  // Response-time sparkline: 2px line, faint area fill, emphasized endpoint.
+  function sparkline(points, color, w, h) {
+    const vals = points.map((p) => p.ms).filter((v) => typeof v === "number");
+    if (vals.length < 2) return "";
+    const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+    const x = (i) => (i / (vals.length - 1)) * w;
+    const y = (v) => h - 2 - ((v - lo) / span) * (h - 4);
+    const line = vals.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+    const area = `${line}L${w},${h}L0,${h}Z`;
+    const id = "g" + Math.random().toString(36).slice(2, 8);
+    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">
+      <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${color}" stop-opacity=".26"/>
+        <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+      </linearGradient></defs>
+      <path d="${area}" fill="url(#${id})"/>
+      <path d="${line}" fill="none" stroke="${color}" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${x(vals.length - 1).toFixed(1)}" cy="${y(vals[vals.length - 1]).toFixed(1)}"
+              r="3" fill="${color}" stroke="var(--surface)" stroke-width="2"/>
+    </svg>`;
+  }
+
+  // Fleet median-response trend, with a crosshair readout on hover.
+  function renderTrend() {
+    const host = $("#trend");
+    const series = state.history.runs.map((r) => {
+      const ms = Object.values(r.sites || {})
+        .map((v) => v.ms).filter((v) => typeof v === "number" && v > 0).sort((a, b) => a - b);
+      if (!ms.length) return null;
+      const mid = Math.floor(ms.length / 2);
+      return { t: r.t, v: ms.length % 2 ? ms[mid] : Math.round((ms[mid - 1] + ms[mid]) / 2) };
+    }).filter(Boolean);
+
+    $("#trend-range").textContent = series.length
+      ? series.length + (series.length === 1 ? " check" : " checks") : "";
+
+    if (series.length < 2) {
+      host.innerHTML = `<p style="margin:0;font-size:13px;color:var(--ink-3)">`
+        + (series.length ? `${series[0].v} ms — the trend line appears once a second check has run.`
+                         : `No checks recorded yet.`) + `</p>`;
+      return;
+    }
+
+    const w = 300, h = 62, ink = "var(--accent)";
+    const vals = series.map((p) => p.v);
+    const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+    const x = (i) => (i / (series.length - 1)) * w;
+    const y = (v) => h - 6 - ((v - lo) / span) * (h - 14);
+    const line = vals.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+
+    host.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"
+        role="img" aria-label="Median response time across the last ${series.length} checks">
+      <line x1="0" y1="${h - 1}" x2="${w}" y2="${h - 1}" stroke="var(--hairline)" stroke-width="1"/>
+      <defs><linearGradient id="trendfill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${ink}" stop-opacity=".2"/>
+        <stop offset="100%" stop-color="${ink}" stop-opacity="0"/>
+      </linearGradient></defs>
+      <path d="${line}L${w},${h}L0,${h}Z" fill="url(#trendfill)"/>
+      <path d="${line}" fill="none" stroke="${ink}" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+      <circle cx="${x(series.length - 1).toFixed(1)}" cy="${y(vals[vals.length - 1]).toFixed(1)}"
+              r="3.5" fill="${ink}" stroke="var(--surface)" stroke-width="2"
+              vector-effect="non-scaling-stroke"/>
+      <rect x="0" y="0" width="${w}" height="${h}" fill="transparent"/>
+    </svg>`;
+
+    const svg = host.querySelector("svg");
+    svg.addEventListener("mousemove", (evt) => {
+      const box = svg.getBoundingClientRect();
+      const i = Math.max(0, Math.min(series.length - 1,
+        Math.round(((evt.clientX - box.left) / box.width) * (series.length - 1))));
+      showTip(evt, `<b>${series[i].v} ms</b> median<br><span class="k">${esc(clock(series[i].t))}</span>`);
+    });
+    svg.addEventListener("mouseleave", hideTip);
+  }
+
+  /* ---- render -------------------------------------------------------- */
+  function render() {
+    const s = state.status;
+    if (!s) {
+      $("#headline").textContent = "No status data yet";
+      $("#subline").textContent = "Run python sitewatch.py --out docs to produce the first snapshot.";
+      $("#rows").innerHTML = `<div class="empty">Nothing to show yet.</div>`;
+      return;
+    }
+
+    const c = s.counts, bad = c.down + c.warn;
+
+    $("#source").textContent = state.live ? "live" : "snapshot";
+    $("#source").dataset.live = String(state.live);
+    $("#beacon").dataset.state = s.overall;
+    $("#tag").textContent = `${s.total} properties, checked every 30 minutes`;
+    $("#checked").textContent = `Checked ${ago(s.generated_at)} · ${clock(s.generated_at)}`;
+
+    $("#headline").textContent =
+      c.down ? `${c.down} of ${s.total} sites ${c.down === 1 ? "is" : "are"} down`
+      : c.warn ? `${c.warn} of ${s.total} sites need${c.warn === 1 ? "s" : ""} a look`
+      : `All ${s.total} sites are up`;
+
+    const worst = s.sites.filter((x) => x.status !== "up").map((x) => x.domain);
+    $("#subline").innerHTML = worst.length
+      ? `Needs attention: ` + worst.map((d) => `<b>${esc(d)}</b>`).join(", ") + `.`
+      : `Every domain answered, every certificate is valid.`;
+
+    // readouts
+    const upSites = s.sites.filter((x) => x.status === "up" && typeof x.ms === "number");
+    const lat = upSites.map((x) => x.ms).sort((a, b) => a - b);
+    const median = lat.length
+      ? (lat.length % 2 ? lat[(lat.length - 1) / 2]
+                        : Math.round((lat[lat.length / 2 - 1] + lat[lat.length / 2]) / 2))
+      : null;
+    const certs = s.sites.filter((x) => typeof x.ssl_days_left === "number")
+                         .sort((a, b) => a.ssl_days_left - b.ssl_days_left);
+    const soonest = certs[0];
+
+    $("#readouts").innerHTML = [
+      { label: "Operational", figure: `${c.up}<span class="unit"> / ${s.total}</span>`,
+        note: "responding normally" },
+      { label: "Needs attention", figure: String(bad),
+        note: `${c.down} down · ${c.warn} warning` },
+      { label: "Median response", figure: median === null ? "—" : `${median}<span class="unit"> ms</span>`,
+        note: "across responding sites" },
+      { label: "Soonest certificate", figure: soonest ? `${soonest.ssl_days_left}<span class="unit"> d</span>` : "—",
+        note: soonest ? soonest.domain : "no certificates read" },
+    ].map((t) => `<div class="tile">
+        <p class="eyebrow">${t.label}</p>
+        <p class="figure tnum">${t.figure}</p>
+        <p class="note mono">${esc(t.note)}</p>
+      </div>`).join("");
+
+    // ledger
+    let sites = s.sites.slice();
+    const q = state.q.trim().toLowerCase();
+    if (q) sites = sites.filter((x) => x.domain.toLowerCase().includes(q));
+    if (state.onlyIssues) sites = sites.filter((x) => x.status !== "up");
+    sites.sort((a, b) =>
+      state.sort === "name"    ? a.domain.localeCompare(b.domain)
+    : state.sort === "latency" ? (b.ms ?? -1) - (a.ms ?? -1)
+    : state.sort === "cert"    ? (a.ssl_days_left ?? 9e3) - (b.ssl_days_left ?? 9e3)
+    : (RANK[a.status] - RANK[b.status]) || a.domain.localeCompare(b.domain));
+
+    $("#rows").innerHTML = sites.length
+      ? sites.map(row).join("")
+      : `<div class="empty">No sites match “${esc(state.q)}”.</div>`;
+
+    wireRows();
+    renderTrend();
+
+    const n = state.history.runs.length;
+    $("#runs-note").innerHTML = n
+      ? `<b>${n}</b> ${n === 1 ? "check" : "checks"} recorded${state.live ? "" : " in this snapshot"}.`
+      : "";
+  }
+
+  function row(x) {
+    const runs = runsFor(x.domain);
+    const recent = runs.slice(-SLOTS);
+
+    // Height is a second channel alongside colour, so the strip still reads
+    // for colour-blind viewers and in greyscale print.
+    const H = { up: 11, warn: 18, down: 26 };
+    const bars = recent.map((r, i) => `<span class="bar" data-s="${r.s}" style="height:${H[r.s]}px"
+        data-i="${runs.length - recent.length + i}" data-d="${esc(x.domain)}"></span>`).join("")
+      || `<span class="strip-empty">no checks yet</span>`;
+
+    // Only checks that actually answered carry a response time — the "15004 ms"
+    // of a timeout is the timeout, not a measurement.
+    const answered = recent.filter((r) => r.s !== "down");
+    const color = x.status === "warn" ? "var(--warn)" : "var(--up)";
+    const spark = x.status === "down" ? "" : sparkline(answered, color, 62, 22);
+
+    const d = x.ssl_days_left;
+    const certState = d === null || d === undefined ? null
+      : d < 0 ? "down" : d <= 7 ? "down" : d <= 21 ? "warn" : "up";
+    const cert = certState === null
+      ? `<div class="cert none">no certificate read</div>`
+      : `<div class="cert" data-expires="${esc(x.ssl_expires || "")}" data-issuer="${esc(x.ssl_issuer || "")}">
+           <div class="cert-top">
+             <span class="days tnum mono">${d < 0 ? "expired" : d + " days"}</span>
+             <span class="issuer">${d < 0 ? "" : "of " + CERT_CYCLE}</span>
+           </div>
+           <div class="meter" data-s="${certState}">
+             <i style="width:${Math.max(2, Math.min(100, ((d < 0 ? 0 : d) / CERT_CYCLE) * 100)).toFixed(1)}%"></i>
+           </div>
+         </div>`;
+
+    return `<div class="lrow site">
+      <div><span class="chip" data-s="${x.status}"><span class="dot"></span>${LABEL[x.status]}</span></div>
+      <div class="site-name">
+        <a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.domain)}</a>
+        <div class="site-note ${x.note === "ok" ? "mono" : ""}" data-s="${x.status}">${esc(
+          x.note === "ok"
+            ? `HTTP ${x.code}` + (x.final_url
+                ? " → " + x.final_url.replace(/^https?:\/\//, "").replace(/\/$/, "")
+                : "")
+            : x.note)}</div>
+      </div>
+      <div class="strip" role="img" aria-label="Last ${recent.length} checks for ${esc(x.domain)}">${bars}</div>
+      <div class="latency">
+        <span class="val tnum mono${x.status === "down" ? " muted" : ""}">${
+          x.status === "down" ? "no response"
+          : typeof x.ms === "number" ? x.ms + " ms" : "—"}</span>
+        ${spark}
+      </div>
+      ${cert}
+    </div>`;
+  }
+
+  function wireRows() {
+    $("#rows").querySelectorAll(".bar[data-i]").forEach((bar) => {
+      bar.addEventListener("mouseenter", (evt) => {
+        const r = runsFor(bar.dataset.d)[Number(bar.dataset.i)];
+        if (!r) return;
+        showTip(evt, `<b>${LABEL[r.s]}</b>${r.c ? " · HTTP " + r.c : ""}`
+          + `${typeof r.ms === "number" ? " · " + r.ms + " ms" : ""}`
+          + `<br><span class="k">${esc(clock(r.t))}</span>`);
+      });
+      bar.addEventListener("mouseleave", hideTip);
+    });
+    $("#rows").querySelectorAll(".cert[data-expires]").forEach((cell) => {
+      const iso = cell.dataset.expires;
+      if (!iso) return;
+      cell.addEventListener("mouseenter", (evt) =>
+        showTip(evt, `<span class="k">Certificate expires</span><br><b>${esc(clock(iso))}</b>`
+          + (cell.dataset.issuer ? `<br><span class="k">Issued by ${esc(cell.dataset.issuer)}</span>` : "")));
+      cell.addEventListener("mouseleave", hideTip);
+    });
+  }
+
+  /* ---- controls ------------------------------------------------------ */
+  $("#q").addEventListener("input", (e) => { state.q = e.target.value; render(); });
+  $("#issues").addEventListener("click", (e) => {
+    state.onlyIssues = !state.onlyIssues;
+    e.currentTarget.setAttribute("aria-pressed", String(state.onlyIssues));
+    render();
+  });
+  $("#sort").addEventListener("change", (e) => { state.sort = e.target.value; render(); });
+  $("#refresh").addEventListener("click", load);
+
+  load();
+  setInterval(() => { if (state.live) load(); }, 60000);
+})();
+</script>
+</body>
+</html>

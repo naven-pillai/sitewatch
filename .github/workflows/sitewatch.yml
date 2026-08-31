@@ -1,0 +1,67 @@
+name: sitewatch
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # every 30 minutes (UTC)
+  workflow_dispatch: {}       # lets you trigger it manually from the Actions tab
+
+# Needed so the job can commit the refreshed dashboard data back to the repo.
+permissions:
+  contents: write
+
+concurrency:
+  group: sitewatch
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install requests
+
+      # --no-fail so a downed site still writes data and commits the dashboard.
+      # The job is failed deliberately in the last step instead.
+      - name: Run checks
+        run: python sitewatch.py --out docs --no-fail
+
+      - name: Commit dashboard data
+        run: |
+          git config user.name  "sitewatch[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/status.json docs/history.json
+          if git diff --staged --quiet; then
+            echo "nothing changed"
+          else
+            git commit -m "sitewatch: status $(date -u +'%Y-%m-%d %H:%M UTC') [skip ci]"
+            git push
+          fi
+
+      - name: Upload result artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sitewatch-result
+          path: docs/status.json
+          retention-days: 7
+
+      # If any site is down the job fails, and GitHub emails you
+      # about the failed scheduled run.
+      - name: Fail if any site is down
+        run: |
+          python - <<'PY'
+          import json, sys
+          s = json.load(open("docs/status.json"))
+          bad = [x for x in s["sites"] if x["status"] == "down"]
+          for x in bad:
+              print(f"::error title=Site down::{x['domain']} — {x['note']}")
+          for x in (x for x in s["sites"] if x["status"] == "warn"):
+              print(f"::warning title=Needs attention::{x['domain']} — {x['note']}")
+          print(f"{s['counts']['up']} up, {s['counts']['warn']} warning, {s['counts']['down']} down")
+          sys.exit(2 if bad else 0)
+          PY

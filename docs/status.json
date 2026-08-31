@@ -1,0 +1,129 @@
+{
+  "generated_at": "2026-08-31T17:28:31Z",
+  "total": 9,
+  "counts": {
+    "up": 7,
+    "warn": 0,
+    "down": 2
+  },
+  "overall": "down",
+  "sites": [
+    {
+      "domain": "martechville.com",
+      "url": "https://martechville.com",
+      "status": "down",
+      "note": "connection timed out",
+      "code": null,
+      "ms": 15005,
+      "final_url": null,
+      "ssl_days_left": null,
+      "ssl_expires": null,
+      "ssl_issuer": null,
+      "error": "connection timed out"
+    },
+    {
+      "domain": "techvendor.my",
+      "url": "https://techvendor.my",
+      "status": "down",
+      "note": "DNS did not resolve",
+      "code": null,
+      "ms": 0,
+      "final_url": null,
+      "ssl_days_left": null,
+      "ssl_expires": null,
+      "ssl_issuer": null,
+      "error": "DNS did not resolve"
+    },
+    {
+      "domain": "agencies.asia",
+      "url": "https://agencies.asia",
+      "status": "up",
+      "note": "ok",
+      "code": 200,
+      "ms": 179,
+      "final_url": null,
+      "ssl_days_left": 42,
+      "ssl_expires": "2026-10-13T04:33:47Z",
+      "ssl_issuer": "Let's Encrypt",
+      "error": null
+    },
+    {
+      "domain": "businessai.my",
+      "url": "https://businessai.my",
+      "status": "up",
+      "note": "ok",
+      "code": 200,
+      "ms": 100,
+      "final_url": null,
+      "ssl_days_left": 72,
+      "ssl_expires": "2026-11-12T10:57:29Z",
+      "ssl_issuer": "Let's Encrypt",
+      "error": null
+    },
+    {
+      "domain": "kerja-ai.com",
+      "url": "https://kerja-ai.com",
+      "status": "up",
+      "note": "ok",
+      "code": 200,
+      "ms": 110,
+      "final_url": null,
+      "ssl_days_left": 38,
+      "ssl_expires": "2026-10-09T09:45:36Z",
+      "ssl_issuer": "Let's Encrypt",
+      "error": null
+    },
+    {
+      "domain": "kerja-remote.com",
+      "url": "https://kerja-remote.com",
+      "status": "up",
+      "note": "ok",
+      "code": 200,
+      "ms": 318,
+      "final_url": null,
+      "ssl_days_left": 36,
+      "ssl_expires": "2026-10-07T11:42:22Z",
+      "ssl_issuer": "Let's Encrypt",
+      "error": null
+    },
+    {
+      "domain": "magnesmarketing.com",
+      "url": "https://magnesmarketing.com",
+      "status": "up",
+      "note": "ok",
+      "code": 200,
+      "ms": 99,
+      "final_url": null,
+      "ssl_days_left": 64,
+      "ssl_expires": "2026-11-04T02:40:02Z",
+      "ssl_issuer": "Let's Encrypt",
+      "error": null
+    },
+    {
+      "domain": "navenpillai.com",
+      "url": "https://navenpillai.com",
+      "status": "up",
+      "note": "ok",
+      "code": 200,
+      "ms": 134,
+      "final_url": null,
+      "ssl_days_left": 41,
+      "ssl_expires": "2026-10-12T15:19:20Z",
+      "ssl_issuer": "Let's Encrypt",
+      "error": null
+    },
+    {
+      "domain": "stmarkscozyhome.com",
+      "url": "https://stmarkscozyhome.com",
+      "status": "up",
+      "note": "ok",
+      "code": 200,
+      "ms": 352,
+      "final_url": "https://www.stmarkscozyhome.com/en",
+      "ssl_days_left": 75,
+      "ssl_expires": "2026-11-15T06:17:23Z",
+      "ssl_issuer": "Let's Encrypt",
+      "error": null
+    }
+  ]
+}
