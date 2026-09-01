@@ -8,7 +8,9 @@
 #   nordap         skip the domain registration lookup
 
 kerja-ai.com
-kerja-remote.com
+# www intentionally not served here: the www CNAME is being retired rather
+# than given its own certificate, so the twin check would only ever warn.
+kerja-remote.com nowww
 agencies.asia
 techpartner.my
 businessai.my

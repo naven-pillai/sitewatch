@@ -34,6 +34,20 @@
       "from": "warn",
       "to": "up",
       "note": "ok"
+    },
+    {
+      "t": "2026-09-01T13:03:11Z",
+      "domain": "kerja-remote.com",
+      "from": "warn",
+      "to": "up",
+      "note": "ok"
+    },
+    {
+      "t": "2026-09-01T13:03:29Z",
+      "domain": "agencies.asia/api/health",
+      "from": "up",
+      "to": "warn",
+      "note": "slow \u2014 4120 ms"
     }
   ],
   "notified": {}
