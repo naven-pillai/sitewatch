@@ -69,6 +69,13 @@
       "from": "warn",
       "to": "up",
       "note": "ok"
+    },
+    {
+      "t": "2026-09-01T15:52:41Z",
+      "domain": "agencies.asia/api/health",
+      "from": "up",
+      "to": "warn",
+      "note": "slow \u2014 3157 ms"
     }
   ],
   "notified": {}
