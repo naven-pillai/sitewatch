@@ -1,0 +1,9 @@
+{
+  "name": "sitewatch-probe",
+  "private": true,
+  "type": "module",
+  "description": "Singapore vantage point for sitewatch — measures response time only.",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

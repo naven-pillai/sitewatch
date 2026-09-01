@@ -27,8 +27,23 @@ jobs:
 
       # Never fails here: the data has to be written and committed even when a
       # site is down. Whether this run counts as a failure is decided last.
+      #
+      # SITEWATCH_PROBE_URL is a repository *variable*, the token a *secret*.
+      # With neither set the probe is skipped and the run works exactly as before.
       - name: Run checks
-        run: python sitewatch.py --out docs --alert-payload alert.json --fail-on never
+        env:
+          SITEWATCH_PROBE_TOKEN: ${{ secrets.SITEWATCH_PROBE_TOKEN }}
+          PROBE_URL: ${{ vars.SITEWATCH_PROBE_URL }}
+        run: |
+          PROBE_ARGS=""
+          if [ -n "$PROBE_URL" ]; then
+            PROBE_ARGS="--probe sin1=$PROBE_URL"
+            echo "Folding in the sin1 vantage point."
+          else
+            echo "No SITEWATCH_PROBE_URL set — checking from this runner only."
+          fi
+          python sitewatch.py --out docs --alert-payload alert.json \
+                 --fail-on never $PROBE_ARGS
 
       - name: Commit dashboard data
         run: |

@@ -99,6 +99,47 @@ step is skipped.
 Every run also writes a summary table to the Actions run page, so you can read
 the result without opening logs.
 
+## Checking from Malaysia and Singapore
+
+GitHub's runners live in the US and Europe, so their response times say nothing
+about what a visitor in Kuala Lumpur experiences. `probe/` is a small function
+that measures response time from wherever you deploy it, and the checker folds
+its readings into each row.
+
+It measures **latency and reachability only**. A certificate's expiry date and a
+robots.txt's contents read identically from anywhere, so the main checker keeps
+ownership of those rather than duplicating them.
+
+It takes no target from the caller — the list comes from its own environment, so
+there is no way to make it fetch an arbitrary URL. Requests need a bearer token,
+and it fails closed if that token isn't configured.
+
+### Deploying it to Singapore
+
+1. Import this repo in Vercel with **Root Directory** set to `probe`. The region
+   is pinned to `sin1` in `probe/vercel.json`.
+2. Set two environment variables on that project:
+   - `SITEWATCH_PROBE_TOKEN` — any long random string.
+   - `SITEWATCH_TARGETS` — run `python3 sitewatch.py --print-targets` and paste.
+3. In this repo's settings, add variable `SITEWATCH_PROBE_URL`
+   (`https://<your-probe>.vercel.app/api/probe`) and secret `SITEWATCH_PROBE_TOKEN`
+   with the same value as step 2.
+
+Locally, or on a VPS somewhere Vercel has no region — Kuala Lumpur, say:
+
+```
+SITEWATCH_PROBE_TOKEN=... SITEWATCH_TARGETS="$(python3 sitewatch.py --print-targets)" \
+  node probe/server.js
+python3 sitewatch.py --probe sin1=http://localhost:8787/api/probe
+```
+
+If the probe's target list drifts out of step with `domains.txt`, the run says
+which sites it stopped covering — silence would be the worse failure.
+
+A probe that is down is a monitoring problem, not an outage: it's reported on
+its own line and never changes a site's status. A site that answers here but
+**not** from the probe is a real outage for that audience, and does warn.
+
 ## The dashboard
 
 `docs/index.html` reads `status.json`, `history.json` and `events.json`, all

@@ -4,55 +4,55 @@
     "expires": null,
     "registrar": null,
     "supported": false,
-    "checked_at": "2026-08-31T17:44:42Z"
+    "checked_at": "2026-09-01T06:46:35Z"
   },
   "magnesmarketing.com": {
-    "days_left": 266,
+    "days_left": 265,
     "expires": "2027-05-25T02:45:56Z",
     "registrar": "GoDaddy.com, LLC",
     "supported": true,
-    "checked_at": "2026-08-31T17:44:42Z"
+    "checked_at": "2026-09-01T06:46:35Z"
   },
   "stmarkscozyhome.com": {
     "days_left": 373,
     "expires": "2027-09-09T15:28:40Z",
     "registrar": "Wix.com Ltd.",
     "supported": true,
-    "checked_at": "2026-08-31T17:44:42Z"
+    "checked_at": "2026-09-01T06:48:53Z"
   },
   "kerja-remote.com": {
-    "days_left": 382,
+    "days_left": 381,
     "expires": "2027-09-18T06:26:28Z",
     "registrar": "NameCheap, Inc.",
     "supported": true,
-    "checked_at": "2026-08-31T17:44:42Z"
+    "checked_at": "2026-09-01T06:46:36Z"
   },
   "navenpillai.com": {
-    "days_left": 248,
+    "days_left": 247,
     "expires": "2027-05-07T03:01:58Z",
     "registrar": "GoDaddy.com, LLC",
     "supported": true,
-    "checked_at": "2026-08-31T17:44:43Z"
+    "checked_at": "2026-09-01T06:46:36Z"
   },
   "agencies.asia": {
     "days_left": 253,
     "expires": "2027-05-12T16:05:09Z",
     "registrar": "NameCheap, Inc.",
     "supported": true,
-    "checked_at": "2026-08-31T17:44:43Z"
+    "checked_at": "2026-09-01T06:46:36Z"
   },
   "kerja-ai.com": {
-    "days_left": 168,
+    "days_left": 167,
     "expires": "2027-02-16T03:17:59Z",
     "registrar": "NameCheap, Inc.",
     "supported": true,
-    "checked_at": "2026-08-31T17:44:44Z"
+    "checked_at": "2026-09-01T06:46:37Z"
   },
   "techpartner.my": {
     "days_left": null,
     "expires": null,
     "registrar": null,
     "supported": false,
-    "checked_at": "2026-08-31T17:44:56Z"
+    "checked_at": "2026-09-01T06:46:36Z"
   }
 }
