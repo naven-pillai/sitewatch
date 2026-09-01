@@ -20,6 +20,20 @@
       "from": "warn",
       "to": "up",
       "note": "ok"
+    },
+    {
+      "t": "2026-09-01T12:36:16Z",
+      "domain": "stmarkscozyhome.com",
+      "from": "up",
+      "to": "warn",
+      "note": "slow \u2014 3152 ms"
+    },
+    {
+      "t": "2026-09-01T12:38:27Z",
+      "domain": "stmarkscozyhome.com",
+      "from": "warn",
+      "to": "up",
+      "note": "ok"
     }
   ],
   "notified": {}
