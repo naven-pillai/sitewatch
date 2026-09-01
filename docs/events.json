@@ -48,6 +48,27 @@
       "from": "up",
       "to": "warn",
       "note": "slow \u2014 4120 ms"
+    },
+    {
+      "t": "2026-09-01T13:03:56Z",
+      "domain": "kerja-ai.com/api/health",
+      "from": "up",
+      "to": "warn",
+      "note": "slow \u2014 3336 ms"
+    },
+    {
+      "t": "2026-09-01T13:03:56Z",
+      "domain": "agencies.asia/api/health",
+      "from": "warn",
+      "to": "up",
+      "note": "ok"
+    },
+    {
+      "t": "2026-09-01T13:17:22Z",
+      "domain": "kerja-ai.com/api/health",
+      "from": "warn",
+      "to": "up",
+      "note": "ok"
     }
   ],
   "notified": {}
