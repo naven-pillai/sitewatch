@@ -90,6 +90,13 @@
       "from": "up",
       "to": "warn",
       "note": "slow \u2014 3008 ms"
+    },
+    {
+      "t": "2026-09-02T02:17:28Z",
+      "domain": "kerja-ai.com/api/health",
+      "from": "warn",
+      "to": "up",
+      "note": "ok"
     }
   ],
   "notified": {}
