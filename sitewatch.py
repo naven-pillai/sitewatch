@@ -96,6 +96,7 @@ def parse_entry(line: str) -> dict:
         "seo": "noseo" not in opts,
         "www": "nowww" not in opts,
         "rdap": "nordap" not in opts,
+        "slow_ms": int(opts["slow"]) if str(opts.get("slow", "")).isdigit() else SLOW_MS,
     }
 
 
@@ -388,9 +389,6 @@ def classify(r: dict) -> tuple[str, list[str]]:
         elif r["sitemap_code"] != 200:
             warn.append(f"sitemap missing{elsewhere} (HTTP {r['sitemap_code']})")
 
-    if not down and r["ms"] and r["ms"] > SLOW_MS:
-        warn.append(f"slow — {r['ms']} ms")
-
     status = DOWN if down else (WARN if warn else UP)
     return status, down + warn
 
@@ -440,6 +438,7 @@ def check(entry: dict, timeout: float, quick: bool, rdap_cache: dict) -> dict:
         "domain_expires": rd.get("expires"),
         "domain_registrar": rd.get("registrar"),
         "domain_rdap": rd.get("supported"),
+        "slow_ms": entry["slow_ms"],
     }
     row["status"], row["issues"] = classify(row)
     row["note"] = row["issues"][0] if row["issues"] else "ok"
@@ -459,6 +458,39 @@ def run(entries: list[dict], timeout: float, workers: int, quick: bool,
         "overall": DOWN if counts[DOWN] else (WARN if counts[WARN] else UP),
         "sites": results,
     }
+
+
+def recount(snapshot: dict) -> None:
+    """Re-derive ordering and totals after a post-pass has changed a status."""
+    snapshot["sites"].sort(key=lambda r: (-RANK[r["status"]], r["domain"]))
+    snapshot["counts"] = {s: sum(1 for r in snapshot["sites"] if r["status"] == s)
+                          for s in (UP, WARN, DOWN)}
+    snapshot["overall"] = (DOWN if snapshot["counts"][DOWN]
+                           else WARN if snapshot["counts"][WARN] else UP)
+
+
+def apply_slow(snapshot: dict, previous: dict | None) -> None:
+    """Warn about slowness only when it persists across two checks.
+
+    One sample either side of a fixed line makes a site flap between up and
+    warning, which is how a dashboard gets ignored. Health endpoints are the
+    worst case: invoked once every 30 minutes, they are always cold, so a
+    wake-up plus a TLS handshake lands near the threshold every single time."""
+    was_slow = {}
+    for site in (previous or {}).get("sites", []):
+        limit = site.get("slow_ms") or SLOW_MS
+        was_slow[site["domain"]] = bool(site.get("ms") and site["ms"] > limit)
+
+    for site in snapshot["sites"]:
+        if site["status"] == DOWN or not site["ms"]:
+            continue
+        limit = site.get("slow_ms") or SLOW_MS
+        if site["ms"] > limit and was_slow.get(site["domain"]):
+            site["issues"].append(f"slow — {site['ms']} ms, and slow on the previous check")
+            if site["status"] == UP:
+                site["status"] = WARN
+        site["note"] = site["issues"][0] if site["issues"] else "ok"
+    recount(snapshot)
 
 
 def now() -> datetime:
@@ -531,11 +563,7 @@ def apply_vantages(snapshot: dict, probes: dict) -> None:
         name: {k: v for k, v in probe.items() if k != "by_url"}
         for name, probe in probes.items()
     }
-    snapshot["sites"].sort(key=lambda r: (-RANK[r["status"]], r["domain"]))
-    snapshot["counts"] = {s: sum(1 for r in snapshot["sites"] if r["status"] == s)
-                          for s in (UP, WARN, DOWN)}
-    snapshot["overall"] = (DOWN if snapshot["counts"][DOWN]
-                           else WARN if snapshot["counts"][WARN] else UP)
+    recount(snapshot)
 
 
 # --------------------------------------------------------------------------- #
@@ -790,6 +818,7 @@ def main() -> int:
         return 0
 
     snapshot = run(entries, args.timeout, args.workers, args.quick, rdap_cache)
+    apply_slow(snapshot, previous)
 
     probes = {}
     token = os.environ.get("SITEWATCH_PROBE_TOKEN")

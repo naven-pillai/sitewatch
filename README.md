@@ -31,6 +31,13 @@ isn't, so the script runs on a clean machine. On macOS the command is `python3`.
 | Status  | Means |
 | ------- | ----- |
 | **Up**      | Answered 2xx/3xx, certificate valid and more than 21 days out, nothing else flagged. |
+A site is only called **slow** when it exceeds its threshold on *two consecutive*
+checks. One sample either side of a fixed line makes a row flap between up and
+warning, which is how a dashboard gets ignored. The health endpoints run with
+`slow=6000` because a route invoked once every 30 minutes is always a cold
+start, and a wake-up plus a fresh TLS handshake to Postgres sits near the
+normal 3-second line without anything being wrong.
+
 | **Warning** | Serving users, but something needs a look — a bot-block (401/403/429), a certificate inside 21 days, a domain inside 30 days, a broken www twin, a robots or sitemap problem, or a reply slower than 3 s. |
 | **Down**    | DNS failed, the connection failed or timed out, the certificate is expired or untrusted, the domain registration lapsed, an expected string was missing, or the server returned 4xx/5xx. |
 
@@ -54,6 +61,7 @@ kerja-ai.com expect="Find AI jobs"    # body must contain this string
 example.com noseo                     # skip robots.txt and sitemap
 example.com nowww                     # skip the www/apex twin check
 example.com nordap                    # skip domain registration lookup
+example.com slow=6000                 # raise the "slow" threshold, in ms
 ```
 
 RDAP has no coverage for `.my` — MYNIC publishes none — so those domains report

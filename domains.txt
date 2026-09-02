@@ -24,24 +24,26 @@ stmarkscozyhome.com
 # so they catch what the checks above structurally cannot.
 #
 # Per-domain checks (robots, www, registration) are already covered by the
-# homepage entry above, so these skip them.
+# homepage entry above, so these skip them. slow=6000 because these are
+# invoked once every 30 minutes and so are always a cold start — a wake-up
+# plus a fresh TLS handshake to Postgres sits near the normal 3s line.
 
-https://kerja-ai.com/api/health           noseo nowww nordap expect='"status":"ok"'
-https://businessai.my/api/health          noseo nowww nordap expect='"status":"ok"'
-https://magnesmarketing.com/api/health    noseo nowww nordap expect='"status":"ok"'
-https://navenpillai.com/api/health        noseo nowww nordap expect='"status":"ok"'
+https://kerja-ai.com/api/health           noseo nowww nordap slow=6000 expect='"status":"ok"'
+https://businessai.my/api/health          noseo nowww nordap slow=6000 expect='"status":"ok"'
+https://magnesmarketing.com/api/health    noseo nowww nordap slow=6000 expect='"status":"ok"'
+https://navenpillai.com/api/health        noseo nowww nordap slow=6000 expect='"status":"ok"'
 
 # Still commented out because the route is committed but not yet in production:
 #   kerja-remote  — on branch feat/job-og-image, not pushed
 #   agencies.asia — on main but 79 unpushed commits, so not pushed
 # Uncomment each once it ships, or sitewatch reports the 404 as an outage.
 
-# https://kerja-remote.com/api/health       noseo nowww nordap expect='"status":"ok"'
+https://kerja-remote.com/api/health       noseo nowww nordap slow=6000 expect='"status":"ok"'
 
-https://agencies.asia/api/health          noseo nowww nordap expect='"status":"ok"'
+https://agencies.asia/api/health          noseo nowww nordap slow=6000 expect='"status":"ok"'
 
 # stmarks serves production from the crm branch, so this one is already live.
-https://www.stmarkscozyhome.com/api/health  noseo nowww nordap expect='"status":"ok"'
+https://www.stmarkscozyhome.com/api/health  noseo nowww nordap slow=6000 expect='"status":"ok"'
 
 # techpartner.my is a static site with no server runtime, so it has no health
 # endpoint — its homepage check already covers everything there is to check.
