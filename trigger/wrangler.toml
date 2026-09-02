@@ -1,0 +1,16 @@
+name = "sitewatch-trigger"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+
+# Cloudflare honours these; GitHub's own scheduler does not.
+[triggers]
+crons = ["*/30 * * * *"]
+
+[vars]
+REPO = "naven-pillai/sitewatch"
+WORKFLOW = "sitewatch.yml"
+REF = "main"
+
+# Secrets (never in this file):
+#   wrangler secret put GITHUB_TOKEN    fine-grained PAT, Actions: read+write
+#   wrangler secret put TRIGGER_TOKEN   optional, enables the manual endpoint

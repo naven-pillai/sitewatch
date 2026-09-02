@@ -148,6 +148,40 @@ A probe that is down is a monitoring problem, not an outage: it's reported on
 its own line and never changes a site's status. A site that answers here but
 **not** from the probe is a real outage for that audience, and does warn.
 
+## The schedule
+
+GitHub's cron is not honoured on free accounts. A `*/30 * * * *` schedule was
+measured firing **6 times in 15 hours** — gaps of 110 to 296 minutes, an average
+of 184. An outage could sit unnoticed for most of a working day, which makes
+"checked every 30 minutes" a claim the infrastructure does not keep.
+
+`trigger/` is a Cloudflare Worker whose cron *is* honoured. It owns the schedule
+and dispatches the workflow over the GitHub API; GitHub then only ever runs on
+an explicit dispatch. Free, and it fires on time.
+
+```
+cd trigger
+npx wrangler login
+npx wrangler secret put GITHUB_TOKEN     # paste the PAT from below
+npx wrangler deploy
+```
+
+The token is a **fine-grained** personal access token, scoped to this repository
+only, with **Actions: Read and write** — nothing else. Create it at
+github.com/settings/personal-access-tokens.
+
+Watch it work with `npx wrangler tail`, or look for `workflow_dispatch` runs
+arriving every 30 minutes in the Actions tab.
+
+Optionally `npx wrangler secret put TRIGGER_TOKEN` to enable a manual endpoint;
+without that secret the Worker's HTTP route returns 404 to everyone, so it never
+becomes something strangers can trigger.
+
+**Once the Worker is confirmed firing, delete the `schedule:` block from
+`.github/workflows/sitewatch.yml`** — leaving both means GitHub's unreliable
+cron adds duplicate runs on top of the Worker's reliable ones. Do it in that
+order, or there will be a window with nothing running at all.
+
 ## The dashboard
 
 `docs/index.html` reads `status.json`, `history.json` and `events.json`, all
