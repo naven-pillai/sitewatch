@@ -4,12 +4,16 @@
 //   SITEWATCH_PROBE_TOKEN=... SITEWATCH_TARGETS="a.com,b.com" node server.js
 //
 import { createServer } from 'node:http'
-import handler from './api/probe.js'
+import probeHandler from './api/probe.js'
+import tickHandler from './api/tick.js'
 
 const port = Number(process.env.PORT || 8787)
 
 createServer(async (req, res) => {
-  if (!req.url.startsWith('/api/probe')) {
+  const route = req.url.startsWith('/api/probe') ? probeHandler
+              : req.url.startsWith('/api/tick')  ? tickHandler
+              : null
+  if (!route) {
     res.writeHead(404).end('not found')
     return
   }
@@ -25,7 +29,7 @@ createServer(async (req, res) => {
     return res
   }
   try {
-    await handler(req, res)
+    await route(req, res)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

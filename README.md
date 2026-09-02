@@ -155,9 +155,26 @@ measured firing **6 times in 15 hours** — gaps of 110 to 296 minutes, an avera
 of 184. An outage could sit unnoticed for most of a working day, which makes
 "checked every 30 minutes" a claim the infrastructure does not keep.
 
-`trigger/` is a Cloudflare Worker whose cron *is* honoured. It owns the schedule
-and dispatches the workflow over the GitHub API; GitHub then only ever runs on
-an explicit dispatch. Free, and it fires on time.
+Two schedulers are provided. Both dispatch the workflow over the GitHub API, so
+GitHub only ever runs on an explicit dispatch. Pick one — running both just
+doubles the runs.
+
+**Option A — Vercel Cron** (`probe/api/tick.js`). No new account, and it lives
+beside the Singapore probe in one project. Needs a paid Vercel plan; the free
+tier caps cron at once a day. Set on that project:
+
+| Variable | Value |
+| -------- | ----- |
+| `CRON_SECRET` | any long random string; Vercel sends it as the bearer token |
+| `GITHUB_TOKEN` | the fine-grained PAT below |
+| `SITEWATCH_REPO` | `naven-pillai/sitewatch` |
+
+The schedule is already declared in `probe/vercel.json`.
+
+**Option B — Cloudflare Worker** (`trigger/`). Free, and independent of Vercel —
+which matters, because Option A runs the monitoring on the same platform as the
+sites it monitors, so a Vercel incident takes out both the sites and the thing
+meant to tell you about them.
 
 ```
 cd trigger
@@ -170,8 +187,9 @@ The token is a **fine-grained** personal access token, scoped to this repository
 only, with **Actions: Read and write** — nothing else. Create it at
 github.com/settings/personal-access-tokens.
 
-Watch it work with `npx wrangler tail`, or look for `workflow_dispatch` runs
-arriving every 30 minutes in the Actions tab.
+Either way, confirm it works by looking for `workflow_dispatch` runs arriving
+every 30 minutes in the Actions tab (`npx wrangler tail` also shows the Worker's
+logs live).
 
 Optionally `npx wrangler secret put TRIGGER_TOKEN` to enable a manual endpoint;
 without that secret the Worker's HTTP route returns 404 to everyone, so it never
