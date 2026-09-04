@@ -37,15 +37,14 @@ isn't, so the script runs on a clean machine. On macOS the command is `python3`.
 A site is only called **slow** when it exceeds its threshold on *two consecutive*
 checks. One sample either side of a fixed line makes a row flap between up and
 warning, which is how a dashboard gets ignored. The health endpoints run with
-`slow=6000` because a route invoked once every 30 minutes is always a cold
-start, and a wake-up plus a fresh TLS handshake to Postgres sits near the
-normal 3-second line without anything being wrong.
+`slow=3000` because a route invoked once every 30 minutes is always a cold
+start, and the wake-up is most of the number.
 
-That 6000 also absorbs the US runner's distance. Once a Singapore probe is
-live and promoted with `--probe-primary`, the same endpoints measure 200–1100 ms
-cold, and the threshold can come down to `slow=3000` — still clear of a cold
-start, but able to notice a real regression. Tighten it only *after* the probe
-is confirmed running, or every health endpoint warns at once.
+It was `6000` while latency came from a US runner, where the Pacific crossing
+alone put every row near the line. With the Singapore probe live and promoted
+via `--probe-primary`, the same endpoints measure **126–461 ms warm** and
+173–1620 ms cold, so 6000 could never have fired on anything real. 3000 clears
+the worst honest cold start and still catches a genuine regression.
 
 A 403 is deliberately *not* a failure. Cloudflare and similar front doors block
 unfamiliar clients, and treating that as an outage produces false alarms.
@@ -67,7 +66,7 @@ kerja-ai.com expect="Find AI jobs"    # body must contain this string
 example.com noseo                     # skip robots.txt and sitemap
 example.com nowww                     # skip the www/apex twin check
 example.com nordap                    # skip domain registration lookup
-example.com slow=6000                 # raise the "slow" threshold, in ms
+example.com slow=6000                 # raise the "slow" threshold, in ms (default 3000)
 ```
 
 RDAP has no coverage for `.my` — MYNIC publishes none — so those domains report

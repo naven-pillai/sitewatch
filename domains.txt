@@ -6,7 +6,7 @@
 #   noseo          skip robots.txt and sitemap checks
 #   nowww          skip the www/apex twin check
 #   nordap         skip the domain registration lookup
-#   slow=6000      raise the "slow" threshold, in ms
+#   slow=3000      raise the "slow" threshold, in ms
 
 # One row per site, pointed at /api/health rather than at the homepage.
 #
@@ -24,19 +24,23 @@
 # homepage and can stay green while the homepage 500s. Nothing here will catch
 # that.
 #
-# slow=6000 because a route invoked once every 30 minutes is always a cold
-# start. Read the README before tightening it — it wants a live probe first.
+# slow=3000 because a route invoked once every 30 minutes is always a cold
+# start, and the boot is most of the number: measured from sin1, these answer
+# in 126-461 ms warm but 173-1620 ms cold. 3000 clears the worst honest cold
+# start with room to spare while still noticing a real regression. It was 6000
+# while latency came from a US runner, where the Pacific crossing alone put
+# every row near the line.
 
-https://kerja-ai.com/api/health             slow=6000 expect='"status":"ok"'
-https://kerja-remote.com/api/health         slow=6000 expect='"status":"ok"'
-https://agencies.asia/api/health            slow=6000 expect='"status":"ok"'
-https://businessai.my/api/health            slow=6000 expect='"status":"ok"'
-https://magnesmarketing.com/api/health      slow=6000 expect='"status":"ok"'
-https://navenpillai.com/api/health          slow=6000 expect='"status":"ok"'
+https://kerja-ai.com/api/health             slow=3000 expect='"status":"ok"'
+https://kerja-remote.com/api/health         slow=3000 expect='"status":"ok"'
+https://agencies.asia/api/health            slow=3000 expect='"status":"ok"'
+https://businessai.my/api/health            slow=3000 expect='"status":"ok"'
+https://magnesmarketing.com/api/health      slow=3000 expect='"status":"ok"'
+https://navenpillai.com/api/health          slow=3000 expect='"status":"ok"'
 
 # Production is served from www here, so www is the row and the twin check
 # looks at the apex — the reverse of every other entry.
-https://www.stmarkscozyhome.com/api/health  slow=6000 expect='"status":"ok"'
+https://www.stmarkscozyhome.com/api/health  slow=3000 expect='"status":"ok"'
 
 # techpartner.my is a static site with no server runtime, so there is no health
 # route to point at. Its homepage is the whole of what there is to check.
