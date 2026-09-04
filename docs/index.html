@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Uptime and TLS certificate status for every domain in domains.txt, rechecked every 30 minutes.">
 <title>sitewatch</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%231b4e6b%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%275.5%27 fill=%27%2334d399%27/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 
@@ -32,7 +33,7 @@
     --down-soft:   #fae7e5;
 
     --shadow: 0 1px 2px rgba(20, 28, 36, .05), 0 8px 24px -16px rgba(20, 28, 36, .28);
-    --radius: 10px;
+    --radius: 14px;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -152,15 +153,17 @@
   .verdict {
     background: var(--surface); border: 1px solid var(--hairline);
     border-radius: var(--radius); box-shadow: var(--shadow);
-    padding: 22px 24px;
+    padding: 30px 28px;
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
-    gap: 26px; align-items: center;
+    gap: 34px; align-items: center;
   }
   .verdict h2 {
-    margin: 6px 0 0; font-size: 27px; font-weight: 600;
-    letter-spacing: -.02em; line-height: 1.2; text-wrap: balance;
+    margin: 8px 0 0; font-size: 36px; font-weight: 600;
+    letter-spacing: -.03em; line-height: 1.12; text-wrap: balance;
+    font-variant-numeric: tabular-nums;
   }
-  .verdict .sub { margin: 8px 0 0; color: var(--ink-2); font-size: 14px; }
+  @media (max-width: 720px) { .verdict h2 { font-size: 29px; } }
+  .verdict .sub { margin: 10px 0 0; color: var(--ink-2); font-size: 14px; }
   .verdict .sub b { font-weight: 600; color: var(--ink); }
 
   .trend { min-width: 0; }
@@ -184,7 +187,10 @@
     line-height: 1.15; margin-top: 7px;
   }
   .tile .figure .unit { font-size: 15px; font-weight: 500; color: var(--ink-3); }
-  .tile .note { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; }
+  .tile .note {
+    font-size: 12px; color: var(--ink-3); margin-top: 4px;
+    overflow-wrap: anywhere; line-height: 1.45;
+  }
 
   /* ---- controls -------------------------------------------------------- */
   .controls {
@@ -375,7 +381,6 @@
       <span class="tag" id="tag">checked every 30 minutes</span>
     </div>
     <span class="source" id="source">live</span>
-    <button class="btn" id="refresh" type="button">Refresh</button>
     <button class="btn" id="theme" type="button" aria-label="Switch theme">Theme</button>
   </div>
 
@@ -533,6 +538,51 @@
     return (pct === 100 ? "100" : pct.toFixed(1)) + "%";
   };
 
+  // Fleet uptime across every recorded check. The per-row figure has always
+  // existed; this is the same arithmetic over the whole history, and it is the
+  // number a status page is actually judged on — a snapshot says nothing about
+  // whether the thing is dependable.
+  const fleetUptime = () => {
+    let ok = 0, total = 0;
+    for (const run of state.history.runs) {
+      for (const v of Object.values(run.sites || {})) {
+        total++;
+        if (v.s !== "down") ok++;
+      }
+    }
+    if (!total) return null;
+    const pct = (ok / total) * 100;
+    return { pct, total, label: (pct === 100 ? "100" : pct.toFixed(2)) + "%" };
+  };
+
+  // Time since the last transition *into* down. Recoveries and warnings are
+  // not incidents; counting them would make the streak reset on good news.
+  const sinceIncident = () => {
+    const last = [...state.events].reverse().find((e) => e.to === "down");
+    const from = last ? Date.parse(last.t) : Date.parse(state.history.runs[0]?.t || "");
+    if (!Number.isFinite(from)) return null;
+    const days = Math.floor((Date.now() - from) / 86400000);
+    return { days, ever: Boolean(last) };
+  };
+
+  // sin1 is a Vercel region code. The claim being made is geographic, so say
+  // the place — an unfamiliar code reads as noise to anyone being shown this.
+  const PLACES = {
+    sin1: "Singapore", hkg1: "Hong Kong", syd1: "Sydney", bom1: "Mumbai",
+    hnd1: "Tokyo", icn1: "Seoul", iad1: "Washington", sfo1: "San Francisco",
+    cle1: "Cleveland", pdx1: "Portland", gru1: "São Paulo", cdg1: "Paris",
+    dub1: "Dublin", fra1: "Frankfurt", lhr1: "London", arn1: "Stockholm",
+    kul: "Kuala Lumpur",
+  };
+  const place = (code) => PLACES[code] || code;
+
+  const median = (xs) => {
+    const v = xs.filter((n) => typeof n === "number").sort((a, b) => a - b);
+    if (!v.length) return null;
+    const mid = Math.floor(v.length / 2);
+    return v.length % 2 ? v[mid] : Math.round((v[mid - 1] + v[mid]) / 2);
+  };
+
   const runsFor = (domain) => state.history.runs
     .map((r) => ({ t: r.t, ...(r.sites || {})[domain] }))
     .filter((r) => r.s);
@@ -641,40 +691,62 @@
     $("#tag").textContent = `${s.total} properties, checked every 30 minutes`;
     $("#checked").textContent = `Checked ${ago(s.generated_at)} · ${clock(s.generated_at)}`;
 
+    // When something is wrong, the problem leads — a track record is no comfort
+    // mid-incident. When nothing is wrong, "all 8 up" is only a fact about this
+    // minute, so the headline carries the figure that actually earns trust.
+    const up = fleetUptime();
+    const streak = sinceIncident();
+    const clean = !c.down && !c.warn;
+
     $("#headline").textContent =
       c.down ? `${c.down} of ${s.total} sites ${c.down === 1 ? "is" : "are"} down`
       : c.warn ? `${c.warn} of ${s.total} sites need${c.warn === 1 ? "s" : ""} a look`
+      : up ? `${up.label} uptime`
       : `All ${s.total} sites are up`;
 
     const worst = s.sites.filter((x) => x.status !== "up").map((x) => x.domain);
+    // Measured from the last outage, or from the start of records when there has
+    // never been one — "no incident on record" reads as *not watching*, which is
+    // the opposite of the claim. Below a day, say so rather than "in 0 days".
+    const streakText = !streak ? null
+      : streak.days >= 1
+        ? `no incidents in ${streak.days} day${streak.days === 1 ? "" : "s"}`
+        : `no incidents today`;
     $("#subline").innerHTML = worst.length
       ? `Needs attention: ` + worst.map((d) => `<b>${esc(d)}</b>`).join(", ") + `.`
-      : `Every domain answered, every certificate is valid.`;
+      : clean && up
+        ? [`<b>${s.total}</b> sites`, `<b>${up.total.toLocaleString()}</b> checks`, streakText]
+            .filter(Boolean).join(" · ")
+        : `Every domain answered, every certificate is valid.`;
 
     // readouts
     const upSites = s.sites.filter((x) => x.status === "up" && typeof x.ms === "number");
-    const lat = upSites.map((x) => x.ms).sort((a, b) => a - b);
-    const median = lat.length
-      ? (lat.length % 2 ? lat[(lat.length - 1) / 2]
-                        : Math.round((lat[lat.length / 2 - 1] + lat[lat.length / 2]) / 2))
-      : null;
+    const fleetMedian = median(upSites.map((x) => x.ms));
     // The checker runs from GitHub's US/EU runners; a probe deployed near the
     // audience is the reading that actually reflects their experience. When one
     // has been promoted, the median above is already that probe's, so the note
     // reports each probe's *warm* median instead — the same number minus the
     // cold start, which is what the sites do when someone is actually using them.
     const promoted = (s.sites.find((x) => x.ms_from) || {}).ms_from || null;
-    const vantageMedians = Object.keys(s.probes || {}).map((name) => {
-      const key = name === promoted ? "warm_ms" : "ms";
-      const vals = s.sites
-        .map((x) => (x.vantages || {})[name])
-        .filter((v) => v && !v.error && typeof v[key] === "number")
-        .map((v) => v[key]).sort((a, b) => a - b);
-      if (!vals.length) return null;
-      const mid = Math.floor(vals.length / 2);
-      const m = vals.length % 2 ? vals[mid] : Math.round((vals[mid - 1] + vals[mid]) / 2);
-      return name === promoted ? `${m} ms warm` : `${name} ${m} ms`;
-    }).filter(Boolean);
+    // The contrast is the interesting part and is normally invisible: almost no
+    // status page says where it measured from, and these two vantages disagree
+    // by 3x on identical requests. Name both, and the number stops being a bare
+    // figure and becomes a claim about a specific audience.
+    const warmMedian = promoted
+      ? median(s.sites.map((x) => (x.vantages || {})[promoted])
+                      .filter((v) => v && !v.error).map((v) => v.warm_ms))
+      : null;
+    const runnerMedian = median(s.sites.map((x) => x.runner_ms));
+
+    const latencyNote = promoted
+      ? [warmMedian !== null ? `${warmMedian} ms warm` : null,
+         runnerMedian !== null ? `${runnerMedian} ms from US` : null]
+          .filter(Boolean).join(" · ")
+      : Object.keys(s.probes || {}).map((name) => {
+          const m = median(s.sites.map((x) => (x.vantages || {})[name])
+                                  .filter((v) => v && !v.error).map((v) => v.ms));
+          return m === null ? null : `${place(name)} ${m} ms`;
+        }).filter(Boolean).join(" · ");
 
     const certs = s.sites.filter((x) => typeof x.ssl_days_left === "number")
                          .sort((a, b) => a.ssl_days_left - b.ssl_days_left);
@@ -689,14 +761,14 @@
         note: "responding normally" },
       { label: "Needs attention", figure: String(bad),
         note: `${c.down} down · ${c.warn} warning` },
-      { label: promoted ? `Median response from ${promoted}` : "Median response",
-        figure: median === null ? "—" : `${median}<span class="unit"> ms</span>`,
-        note: vantageMedians.length ? vantageMedians.join(" · ") : "responding sites" },
+      { label: promoted ? `Median from ${place(promoted)}` : "Median response",
+        figure: fleetMedian === null ? "—" : `${fleetMedian}<span class="unit"> ms</span>`,
+        note: latencyNote || "responding sites" },
       { label: "Soonest certificate", figure: soonest ? `${soonest.ssl_days_left}<span class="unit"> d</span>` : "—",
-        note: soonest ? soonest.domain : "no certificates read" },
+        note: soonest ? soonest.host : "no certificates read" },
       { label: "Soonest renewal", figure: renewal ? `${renewal.domain_days_left}<span class="unit"> d</span>` : "—",
         note: renewal
-          ? renewal.domain + (unknown ? ` · ${unknown} not published` : "")
+          ? renewal.host + (unknown ? ` · ${unknown} unpublished` : "")
           : "no registry data" },
     ].map((t) => `<div class="tile">
         <p class="eyebrow">${t.label}</p>
@@ -869,7 +941,6 @@
     render();
   });
   $("#sort").addEventListener("change", (e) => { state.sort = e.target.value; render(); });
-  $("#refresh").addEventListener("click", load);
 
   load();
   setInterval(() => { if (state.live) load(); }, 60000);
