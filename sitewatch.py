@@ -393,12 +393,18 @@ def classify(r: dict) -> tuple[str, list[str]]:
     return status, down + warn
 
 
-def check(entry: dict, timeout: float, quick: bool, rdap_cache: dict) -> dict:
+NO_TLS = {"days_left": None, "expires": None, "issuer": None, "valid": None,
+          "error": None, "covers_host": None}
+
+
+def check(entry: dict, timeout: float, quick: bool, rdap_cache: dict,
+          tls_by_host: dict) -> dict:
     url, host = entry["url"], entry["host"]
     http = check_http(url, timeout, want_body=bool(entry["expect"]))
-    tls = check_ssl(host, timeout) if url.startswith("https") else \
-        {"days_left": None, "expires": None, "issuer": None, "valid": None,
-         "error": None, "covers_host": None}
+    # Read once per host, in run(), and shared here. A certificate belongs to
+    # the host, not to the row, so every entry on that host must report the
+    # same one.
+    tls = tls_by_host.get(host, NO_TLS) if url.startswith("https") else NO_TLS
 
     # Secondary checks get a tighter budget: they add context, and none of them
     # should be able to hold a run open for the full primary timeout.
@@ -447,8 +453,19 @@ def check(entry: dict, timeout: float, quick: bool, rdap_cache: dict) -> dict:
 
 def run(entries: list[dict], timeout: float, workers: int, quick: bool,
         rdap_cache: dict) -> dict:
+    # One certificate read per host, before anything else, shared by every entry
+    # on that host. Reading it once per *entry* meant a host with both a homepage
+    # and a health check was handshaken twice, and a renewal landing between the
+    # two reads made the report contradict itself: agencies.asia once reported
+    # 40 days and 89 days for the same certificate in the same snapshot. Both
+    # readings were true when taken, which is precisely what makes it useless.
+    hosts = sorted({e["host"] for e in entries if e["url"].startswith("https")})
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-        results = list(pool.map(lambda e: check(e, timeout, quick, rdap_cache), entries))
+        tls_by_host = dict(zip(hosts, pool.map(lambda h: check_ssl(h, timeout), hosts)))
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+        results = list(pool.map(
+            lambda e: check(e, timeout, quick, rdap_cache, tls_by_host), entries))
     results.sort(key=lambda r: (-RANK[r["status"]], r["domain"]))
     counts = {s: sum(1 for r in results if r["status"] == s) for s in (UP, WARN, DOWN)}
     return {
@@ -530,11 +547,18 @@ def fetch_probe(name: str, url: str, token: str | None, timeout: float) -> dict:
     return out
 
 
-def apply_vantages(snapshot: dict, probes: dict) -> None:
+def apply_vantages(snapshot: dict, probes: dict, primary: str | None = None) -> None:
     """Fold remote latency into each row. A site that answers here but not from
     Singapore is genuinely broken for the audience, so that earns a warning —
     but only when the probe itself is healthy, or one broken probe would paint
-    every row yellow."""
+    every row yellow.
+
+    With `primary` naming a probe, that probe's reading becomes the row's
+    headline `ms` and the runner's own number moves to `runner_ms`. This matters
+    more than it looks: GitHub's runners are in the US and Europe, so a site
+    served from Singapore is three round trips of ocean away before it has done
+    any work. Left as the headline, that reading both misreports the audience's
+    experience and trips the slow threshold on sites that are in fact fast."""
     # The probe's target list lives in its own environment and can drift out of
     # step with domains.txt. Silently reporting nothing for the sites it forgot
     # would be the worst outcome, so track what it failed to cover.
@@ -550,13 +574,23 @@ def apply_vantages(snapshot: dict, probes: dict) -> None:
             if not hit:
                 probe["missing"].append(site["domain"])
                 continue
-            seen[name] = {"ms": hit.get("ms"), "code": hit.get("code"),
-                          "error": hit.get("error")}
+            seen[name] = {"ms": hit.get("ms"), "warm_ms": hit.get("warmMs"),
+                          "code": hit.get("code"), "error": hit.get("error")}
             if hit.get("error") and site["status"] != DOWN:
                 site["issues"].append(f"unreachable from {name} — {hit['error']}")
                 site["status"] = WARN
         if seen:
             site["vantages"] = seen
+
+        # Promote only on a reading that actually arrived. A probe that failed
+        # for this one row must leave the runner's number in place rather than
+        # blanking the latency, or a probe hiccup reads as a dead site.
+        chosen = seen.get(primary) if primary else None
+        if chosen and chosen.get("ms") is not None and not chosen.get("error"):
+            site["runner_ms"] = site["ms"]
+            site["ms"] = chosen["ms"]
+            site["ms_from"] = primary
+
         site["note"] = site["issues"][0] if site["issues"] else "ok"
 
     snapshot["probes"] = {
@@ -639,7 +673,9 @@ def report(snapshot: dict, events: list[dict]) -> None:
     width = max((len(s["domain"]) for s in snapshot["sites"]), default=10) + 2
     rule = C.dim("  " + "─" * (width + 46))
     print()
-    print(C.bold("  sitewatch") + C.dim(f"   {snapshot['generated_at']}"))
+    where = next((s.get("ms_from") for s in snapshot["sites"] if s.get("ms_from")), None)
+    measured = f"   latency from {where}" if where else ""
+    print(C.bold("  sitewatch") + C.dim(f"   {snapshot['generated_at']}{measured}"))
     print(rule)
 
     for s in snapshot["sites"]:
@@ -656,8 +692,20 @@ def report(snapshot: dict, events: list[dict]) -> None:
             tls = paint(f"  ssl {f'{d}d'.rjust(5)}")
         remote = ""
         for name, v in (s.get("vantages") or {}).items():
-            reading = f"{v['ms']} ms" if v.get("ms") is not None and not v.get("error") else "—"
-            remote += C.dim(f"  {name} {reading.rjust(7)}")
+            if v.get("error") or v.get("ms") is None:
+                remote += C.dim(f"  {name} {'—'.rjust(7)}")
+                continue
+            # When this probe already supplied the headline, repeating its cold
+            # number says nothing. The warm one does: the gap between the two is
+            # the cold start, and that is the part worth acting on.
+            if name == s.get("ms_from"):
+                warm = v.get("warm_ms")
+                if warm is not None:
+                    reading = f"{warm} ms"
+                    remote += C.dim(f"  warm {reading.rjust(7)}")
+            else:
+                reading = f"{v['ms']} ms"
+                remote += C.dim(f"  {name} {reading.rjust(7)}")
         print(f"  {color('●')} {color(label)}  {s['domain'].ljust(width)}"
               f"{C.dim(code)} {ms}{tls}{remote}")
         for issue in s["issues"]:
@@ -782,6 +830,10 @@ def main() -> int:
     p.add_argument("--probe", action="append", default=[], metavar="NAME=URL",
                    help="a remote vantage point to fold in; repeatable "
                         "(token from $SITEWATCH_PROBE_TOKEN)")
+    p.add_argument("--probe-primary", metavar="NAME",
+                   help="use this probe's reading as the headline latency, "
+                        "instead of the runner's — the runner is in the US/EU, "
+                        "so its number is not what your audience experiences")
     p.add_argument("--print-targets", action="store_true",
                    help="print the domain list as the probe's SITEWATCH_TARGETS value")
     p.add_argument("--no-fail", action="store_true", help="alias for --fail-on never")
@@ -818,7 +870,6 @@ def main() -> int:
         return 0
 
     snapshot = run(entries, args.timeout, args.workers, args.quick, rdap_cache)
-    apply_slow(snapshot, previous)
 
     probes = {}
     token = os.environ.get("SITEWATCH_PROBE_TOKEN")
@@ -828,8 +879,23 @@ def main() -> int:
             return 3
         name, probe_url = spec.split("=", 1)
         probes[name] = fetch_probe(name, probe_url, token, args.timeout)
+
+    # A typo here would silently leave the US reading as the headline, which is
+    # the exact thing the flag exists to stop. Say so instead.
+    if args.probe_primary and args.probe_primary not in probes:
+        known = ", ".join(probes) or "none given"
+        print(f"sitewatch: --probe-primary {args.probe_primary!r} is not one of "
+              f"the probes passed with --probe ({known})", file=sys.stderr)
+        return 3
+
     if probes:
-        apply_vantages(snapshot, probes)
+        apply_vantages(snapshot, probes, args.probe_primary)
+
+    # After the vantages, so "slow" judges whatever ended up as the headline
+    # number. The previous run's snapshot may still hold runner readings, so a
+    # promotion costs at most one run of slow-detection before both sides of the
+    # comparison are measured from the same place.
+    apply_slow(snapshot, previous)
 
     events = transitions(previous, snapshot)
     notified = dict(log.get("notified", {}))

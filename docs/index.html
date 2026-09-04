@@ -564,10 +564,18 @@
   // Fleet median-response trend, with a crosshair readout on hover.
   function renderTrend() {
     const host = $("#trend");
+    // A median over a different set of sites is not comparable to the one
+    // beside it. Runs predating the current list keep only the sites that
+    // survived into it, so a run left holding a couple of rows would plot a
+    // point about those rows and nothing else. Per-site sparklines are
+    // unaffected — they read one domain at a time, and every run still has
+    // that domain's own reading.
+    const fleet = Math.max(1, Math.round(
+      (state.status.sites || []).length * 0.6));
     const series = state.history.runs.map((r) => {
       const ms = Object.values(r.sites || {})
         .map((v) => v.ms).filter((v) => typeof v === "number" && v > 0).sort((a, b) => a - b);
-      if (!ms.length) return null;
+      if (ms.length < fleet) return null;
       const mid = Math.floor(ms.length / 2);
       return { t: r.t, v: ms.length % 2 ? ms[mid] : Math.round((ms[mid - 1] + ms[mid]) / 2) };
     }).filter(Boolean);
@@ -651,16 +659,21 @@
                         : Math.round((lat[lat.length / 2 - 1] + lat[lat.length / 2]) / 2))
       : null;
     // The checker runs from GitHub's US/EU runners; a probe deployed near the
-    // audience is the reading that actually reflects their experience.
+    // audience is the reading that actually reflects their experience. When one
+    // has been promoted, the median above is already that probe's, so the note
+    // reports each probe's *warm* median instead — the same number minus the
+    // cold start, which is what the sites do when someone is actually using them.
+    const promoted = (s.sites.find((x) => x.ms_from) || {}).ms_from || null;
     const vantageMedians = Object.keys(s.probes || {}).map((name) => {
+      const key = name === promoted ? "warm_ms" : "ms";
       const vals = s.sites
         .map((x) => (x.vantages || {})[name])
-        .filter((v) => v && !v.error && typeof v.ms === "number")
-        .map((v) => v.ms).sort((a, b) => a - b);
+        .filter((v) => v && !v.error && typeof v[key] === "number")
+        .map((v) => v[key]).sort((a, b) => a - b);
       if (!vals.length) return null;
       const mid = Math.floor(vals.length / 2);
       const m = vals.length % 2 ? vals[mid] : Math.round((vals[mid - 1] + vals[mid]) / 2);
-      return `${name} ${m} ms`;
+      return name === promoted ? `${m} ms warm` : `${name} ${m} ms`;
     }).filter(Boolean);
 
     const certs = s.sites.filter((x) => typeof x.ssl_days_left === "number")
@@ -676,7 +689,8 @@
         note: "responding normally" },
       { label: "Needs attention", figure: String(bad),
         note: `${c.down} down · ${c.warn} warning` },
-      { label: "Median response", figure: median === null ? "—" : `${median}<span class="unit"> ms</span>`,
+      { label: promoted ? `Median response from ${promoted}` : "Median response",
+        figure: median === null ? "—" : `${median}<span class="unit"> ms</span>`,
         note: vantageMedians.length ? vantageMedians.join(" · ") : "responding sites" },
       { label: "Soonest certificate", figure: soonest ? `${soonest.ssl_days_left}<span class="unit"> d</span>` : "—",
         note: soonest ? soonest.domain : "no certificates read" },
@@ -794,11 +808,29 @@
             : typeof x.ms === "number" ? x.ms + " ms" : "—"}</span>
           ${spark}
         </div>
-        ${Object.entries(x.vantages || {}).map(([name, v]) => `
+        ${Object.entries(x.vantages || {}).map(([name, v]) => {
+          // The headline already *is* this probe's cold reading, so repeating it
+          // adds nothing. Its warm reading does: the gap between them is the
+          // cold start, which is a different problem with a different fix.
+          if (name === x.ms_from) {
+            if (typeof v.warm_ms !== "number") return "";
+            // Only when the first hit was actually the slower one. A container
+            // that happened to be awake already makes the second hit the dearer
+            // of the two, and "-221 ms of cold start" is worse than no caption.
+            const boot = typeof v.ms === "number" && v.ms > v.warm_ms
+              ? v.ms - v.warm_ms : null;
+            return `
+          <div class="vantage" title="${boot === null ? "already warm" : boot + " ms of that is cold start"}">
+            <span class="where">warm</span>
+            <b class="mono">${v.warm_ms} ms</b>
+          </div>`;
+          }
+          return `
           <div class="vantage" data-failed="${Boolean(v.error)}">
             <span class="where">${esc(name)}</span>
             <b class="mono">${v.error ? "no response" : (typeof v.ms === "number" ? v.ms + " ms" : "—")}</b>
-          </div>`).join("")}
+          </div>`;
+        }).join("")}
       </div>
       ${cert}
     </div>`;

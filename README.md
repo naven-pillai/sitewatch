@@ -31,6 +31,9 @@ isn't, so the script runs on a clean machine. On macOS the command is `python3`.
 | Status  | Means |
 | ------- | ----- |
 | **Up**      | Answered 2xx/3xx, certificate valid and more than 21 days out, nothing else flagged. |
+| **Warning** | Serving users, but something needs a look — a bot-block (401/403/429), a certificate inside 21 days, a domain inside 30 days, a broken www twin, a robots or sitemap problem, or a reply slower than 3 s. |
+| **Down**    | DNS failed, the connection failed or timed out, the certificate is expired or untrusted, the domain registration lapsed, an expected string was missing, or the server returned 4xx/5xx. |
+
 A site is only called **slow** when it exceeds its threshold on *two consecutive*
 checks. One sample either side of a fixed line makes a row flap between up and
 warning, which is how a dashboard gets ignored. The health endpoints run with
@@ -38,8 +41,11 @@ warning, which is how a dashboard gets ignored. The health endpoints run with
 start, and a wake-up plus a fresh TLS handshake to Postgres sits near the
 normal 3-second line without anything being wrong.
 
-| **Warning** | Serving users, but something needs a look — a bot-block (401/403/429), a certificate inside 21 days, a domain inside 30 days, a broken www twin, a robots or sitemap problem, or a reply slower than 3 s. |
-| **Down**    | DNS failed, the connection failed or timed out, the certificate is expired or untrusted, the domain registration lapsed, an expected string was missing, or the server returned 4xx/5xx. |
+That 6000 also absorbs the US runner's distance. Once a Singapore probe is
+live and promoted with `--probe-primary`, the same endpoints measure 200–1100 ms
+cold, and the threshold can come down to `slow=3000` — still clear of a cold
+start, but able to notice a real regression. Tighten it only *after* the probe
+is confirmed running, or every health endpoint warns at once.
 
 A 403 is deliberately *not* a failure. Cloudflare and similar front doors block
 unfamiliar clients, and treating that as an outage produces false alarms.
@@ -67,6 +73,24 @@ example.com slow=6000                 # raise the "slow" threshold, in ms
 RDAP has no coverage for `.my` — MYNIC publishes none — so those domains report
 "not published" rather than a false all-clear. `.com` and `.asia` work.
 
+### One row per site
+
+Each site gets a single entry, pointed at `/api/health` rather than at the
+homepage, with the robots, sitemap, www-twin and registration checks left on.
+Those read the *host*, not the path, so one row covers them.
+
+It used to be two rows per site — a homepage row and a health row with
+`noseo nowww nordap`. That bought nothing and cost a second certificate read
+per host, which is how `agencies.asia` came to report **40 days and 89 days for
+the same certificate in the same snapshot**: two handshakes either side of a
+renewal, both true when taken, and useless together. The certificate is now
+read once per host and shared by every entry on it, so rows on the same host
+cannot disagree.
+
+The tradeoff is deliberate: `/api/health` is a different route from the
+homepage and stays green while the homepage 500s. Nothing here catches that.
+Add the homepage back as its own entry if you want it — the checks compose.
+
 ## Health endpoints
 
 `/api/health` exists in each of the seven Next.js apps. It runs one real
@@ -83,11 +107,13 @@ an incident.
 The query is bounded by a 5-second `AbortSignal.timeout`, so a hung database
 returns 503 instead of holding the request open.
 
-The entries are present but commented out in `domains.txt` — uncomment each one
-after that site deploys, or a 404 will be reported as an outage.
+All seven are live in `domains.txt`. A route that has not shipped yet returns
+404, which is reported as an outage — so comment an entry out until it deploys
+rather than leaving it to alarm.
 
 `techpartner.my` is a static site with no server runtime, so it has no health
-endpoint; its homepage check already covers everything there is to check.
+endpoint; it is the one entry still pointed at a homepage, and that covers
+everything there is to check there.
 
 ## Alerting
 
@@ -122,6 +148,50 @@ It takes no target from the caller — the list comes from its own environment, 
 there is no way to make it fetch an arbitrary URL. Requests need a bearer token,
 and it fails closed if that token isn't configured.
 
+**Until you deploy it, every millisecond on the dashboard is a US number**, and
+it overstates the truth by three to eight times. The sites run in `sin1`, so
+from a US runner each check pays a TCP handshake, a TLS handshake and the
+request itself across the Pacific — roughly three round trips of about 230 ms
+before the server has done any work. The same checker run from Selangor:
+
+| | from a US runner | from Malaysia |
+| --- | --- | --- |
+| `stmarkscozyhome.com` | 1621 ms | 375 ms |
+| `navenpillai.com` | 1119 ms | 133 ms |
+| `agencies.asia` | 866 ms | 366 ms |
+| `kerja-ai.com` | 430 ms | 143 ms |
+
+Pass `--probe-primary NAME` and that probe's reading becomes the row's headline
+latency, with the runner's kept as `runner_ms`. The workflow does this
+automatically once `SITEWATCH_PROBE_URL` is set. It is not cosmetic: the slow
+threshold judges the headline number, so without it a site that answers a
+Malaysian visitor in 200 ms can be flagged slow for being far from Virginia.
+
+Expect the sparklines to step down sharply on the first promoted run. That is
+the measurement moving 15 000 km, not the sites getting faster — `history.json`
+keeps whatever was the headline at the time, so the runs either side of the
+switch are not comparable.
+
+### Cold starts, and why a health endpoint looks slow
+
+The probe hits each target **twice** and reports both: `ms` is the first hit —
+cold container, fresh connection, what someone arriving at an idle site waits
+for — and `warmMs` is the second, on the now-open connection to the now-awake
+container. The gap between them is the cold start, and on these sites it is most
+of the number:
+
+| `/api/health` | cold | warm |
+| --- | --- | --- |
+| `kerja-ai.com` | 1079 ms | 321 ms |
+| `agencies.asia` | 1113 ms | 480 ms |
+| `businessai.my` | 828 ms | 250 ms |
+
+A route invoked once every 30 minutes is cold on every single check, so the cold
+figure alone makes a healthy site look broken, and the warm figure alone hides a
+real cost from the hour's first visitor. Keeping both separates "the container
+was asleep" — fix with traffic, a warmer, or a lighter cold path — from "the
+query is slow", which is a database problem and needs a different fix.
+
 ### Deploying it to Singapore
 
 1. Import this repo in Vercel with **Root Directory** set to `probe`. The region
@@ -138,7 +208,7 @@ Locally, or on a VPS somewhere Vercel has no region — Kuala Lumpur, say:
 ```
 SITEWATCH_PROBE_TOKEN=... SITEWATCH_TARGETS="$(python3 sitewatch.py --print-targets)" \
   node probe/server.js
-python3 sitewatch.py --probe sin1=http://localhost:8787/api/probe
+python3 sitewatch.py --probe kul=http://localhost:8787/api/probe --probe-primary kul
 ```
 
 If the probe's target list drifts out of step with `domains.txt`, the run says
@@ -231,3 +301,7 @@ Add `?theme=dark` or `?theme=light` to any URL to pin the theme.
 
 Removing a domain from `domains.txt` also drops it from `history.json` on the
 next run, so the dashboard's median line always compares the same set of sites.
+Runs left holding too few of the current sites to be comparable — everything
+before the switch to one row per site, for instance — are skipped by the trend
+line rather than plotted as a median over whatever survived. Per-site sparklines
+are unaffected: they read one domain at a time.
