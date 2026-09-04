@@ -564,10 +564,18 @@
   // Fleet median-response trend, with a crosshair readout on hover.
   function renderTrend() {
     const host = $("#trend");
+    // A median over a different set of sites is not comparable to the one
+    // beside it. Runs predating the current list keep only the sites that
+    // survived into it, so a run left holding a couple of rows would plot a
+    // point about those rows and nothing else. Per-site sparklines are
+    // unaffected — they read one domain at a time, and every run still has
+    // that domain's own reading.
+    const fleet = Math.max(1, Math.round(
+      (state.status.sites || []).length * 0.6));
     const series = state.history.runs.map((r) => {
       const ms = Object.values(r.sites || {})
         .map((v) => v.ms).filter((v) => typeof v === "number" && v > 0).sort((a, b) => a - b);
-      if (!ms.length) return null;
+      if (ms.length < fleet) return null;
       const mid = Math.floor(ms.length / 2);
       return { t: r.t, v: ms.length % 2 ? ms[mid] : Math.round((ms[mid - 1] + ms[mid]) / 2) };
     }).filter(Boolean);

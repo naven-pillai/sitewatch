@@ -73,6 +73,24 @@ example.com slow=6000                 # raise the "slow" threshold, in ms
 RDAP has no coverage for `.my` — MYNIC publishes none — so those domains report
 "not published" rather than a false all-clear. `.com` and `.asia` work.
 
+### One row per site
+
+Each site gets a single entry, pointed at `/api/health` rather than at the
+homepage, with the robots, sitemap, www-twin and registration checks left on.
+Those read the *host*, not the path, so one row covers them.
+
+It used to be two rows per site — a homepage row and a health row with
+`noseo nowww nordap`. That bought nothing and cost a second certificate read
+per host, which is how `agencies.asia` came to report **40 days and 89 days for
+the same certificate in the same snapshot**: two handshakes either side of a
+renewal, both true when taken, and useless together. The certificate is now
+read once per host and shared by every entry on it, so rows on the same host
+cannot disagree.
+
+The tradeoff is deliberate: `/api/health` is a different route from the
+homepage and stays green while the homepage 500s. Nothing here catches that.
+Add the homepage back as its own entry if you want it — the checks compose.
+
 ## Health endpoints
 
 `/api/health` exists in each of the seven Next.js apps. It runs one real
@@ -89,11 +107,13 @@ an incident.
 The query is bounded by a 5-second `AbortSignal.timeout`, so a hung database
 returns 503 instead of holding the request open.
 
-The entries are present but commented out in `domains.txt` — uncomment each one
-after that site deploys, or a 404 will be reported as an outage.
+All seven are live in `domains.txt`. A route that has not shipped yet returns
+404, which is reported as an outage — so comment an entry out until it deploys
+rather than leaving it to alarm.
 
 `techpartner.my` is a static site with no server runtime, so it has no health
-endpoint; its homepage check already covers everything there is to check.
+endpoint; it is the one entry still pointed at a homepage, and that covers
+everything there is to check there.
 
 ## Alerting
 
@@ -281,3 +301,7 @@ Add `?theme=dark` or `?theme=light` to any URL to pin the theme.
 
 Removing a domain from `domains.txt` also drops it from `history.json` on the
 next run, so the dashboard's median line always compares the same set of sites.
+Runs left holding too few of the current sites to be comparable — everything
+before the switch to one row per site, for instance — are skipped by the trend
+line rather than plotted as a median over whatever survived. Per-site sparklines
+are unaffected: they read one domain at a time.

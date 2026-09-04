@@ -393,12 +393,18 @@ def classify(r: dict) -> tuple[str, list[str]]:
     return status, down + warn
 
 
-def check(entry: dict, timeout: float, quick: bool, rdap_cache: dict) -> dict:
+NO_TLS = {"days_left": None, "expires": None, "issuer": None, "valid": None,
+          "error": None, "covers_host": None}
+
+
+def check(entry: dict, timeout: float, quick: bool, rdap_cache: dict,
+          tls_by_host: dict) -> dict:
     url, host = entry["url"], entry["host"]
     http = check_http(url, timeout, want_body=bool(entry["expect"]))
-    tls = check_ssl(host, timeout) if url.startswith("https") else \
-        {"days_left": None, "expires": None, "issuer": None, "valid": None,
-         "error": None, "covers_host": None}
+    # Read once per host, in run(), and shared here. A certificate belongs to
+    # the host, not to the row, so every entry on that host must report the
+    # same one.
+    tls = tls_by_host.get(host, NO_TLS) if url.startswith("https") else NO_TLS
 
     # Secondary checks get a tighter budget: they add context, and none of them
     # should be able to hold a run open for the full primary timeout.
@@ -447,8 +453,19 @@ def check(entry: dict, timeout: float, quick: bool, rdap_cache: dict) -> dict:
 
 def run(entries: list[dict], timeout: float, workers: int, quick: bool,
         rdap_cache: dict) -> dict:
+    # One certificate read per host, before anything else, shared by every entry
+    # on that host. Reading it once per *entry* meant a host with both a homepage
+    # and a health check was handshaken twice, and a renewal landing between the
+    # two reads made the report contradict itself: agencies.asia once reported
+    # 40 days and 89 days for the same certificate in the same snapshot. Both
+    # readings were true when taken, which is precisely what makes it useless.
+    hosts = sorted({e["host"] for e in entries if e["url"].startswith("https")})
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-        results = list(pool.map(lambda e: check(e, timeout, quick, rdap_cache), entries))
+        tls_by_host = dict(zip(hosts, pool.map(lambda h: check_ssl(h, timeout), hosts)))
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+        results = list(pool.map(
+            lambda e: check(e, timeout, quick, rdap_cache, tls_by_host), entries))
     results.sort(key=lambda r: (-RANK[r["status"]], r["domain"]))
     counts = {s: sum(1 for r in results if r["status"] == s) for s in (UP, WARN, DOWN)}
     return {
