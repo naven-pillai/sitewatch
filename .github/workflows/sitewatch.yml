@@ -37,10 +37,17 @@ jobs:
         run: |
           PROBE_ARGS=""
           if [ -n "$PROBE_URL" ]; then
-            PROBE_ARGS="--probe sin1=$PROBE_URL"
-            echo "Folding in the sin1 vantage point."
+            # --probe-primary makes the Singapore reading the headline latency.
+            # This runner is in the US or Europe, so a site served from sin1 is
+            # three round trips of ocean away before it does any work — a number
+            # that describes the runner's distance, not the audience's
+            # experience, and one that trips the slow threshold on sites that
+            # are in fact fast. The runner's own reading is kept as runner_ms.
+            PROBE_ARGS="--probe sin1=$PROBE_URL --probe-primary sin1"
+            echo "Measuring latency from sin1; this runner is the fallback."
           else
             echo "No SITEWATCH_PROBE_URL set — checking from this runner only."
+            echo "Latency will reflect US/EU distance, not Malaysian visitors."
           fi
           python sitewatch.py --out docs --alert-payload alert.json \
                  --fail-on never $PROBE_ARGS

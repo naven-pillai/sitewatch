@@ -37,7 +37,7 @@ function targets() {
     .slice(0, MAX_TARGETS)
 }
 
-async function measure(url) {
+async function attempt(url) {
   for (const method of ['HEAD', 'GET']) {
     const started = Date.now()
     try {
@@ -64,6 +64,25 @@ async function measure(url) {
     }
   }
   return { url, code: null, ms: null, error: 'failed' }
+}
+
+// Two hits, because they answer different questions.
+//
+// The first pays for a cold container, a fresh TCP connection and a TLS
+// handshake — what a visitor arriving at an idle site actually waits for.
+// The second reuses that connection against a now-awake container, so what
+// is left is the work the request really does.
+//
+// Reporting only the first makes a healthy site look slow: a route invoked
+// once every 30 minutes is cold on every single check, and the wake-up is
+// most of the number. Reporting only the second hides a real cost from the
+// first visitor of the hour. The gap between them *is* the cold start, so
+// keep both and let the dashboard show the difference.
+async function measure(url) {
+  const cold = await attempt(url)
+  if (cold.error) return { ...cold, warmMs: null }
+  const warm = await attempt(url)
+  return { ...cold, warmMs: warm.error ? null : warm.ms }
 }
 
 export default async function handler(req, res) {
