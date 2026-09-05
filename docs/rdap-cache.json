@@ -18,14 +18,14 @@
     "expires": "2027-09-09T15:28:40Z",
     "registrar": "Wix.com Ltd.",
     "supported": true,
-    "checked_at": "2026-09-04T21:30:52Z"
+    "checked_at": "2026-09-05T10:00:47Z"
   },
   "kerja-remote.com": {
-    "days_left": 378,
+    "days_left": 377,
     "expires": "2027-09-18T06:26:28Z",
     "registrar": "NameCheap, Inc.",
     "supported": true,
-    "checked_at": "2026-09-04T21:30:51Z"
+    "checked_at": "2026-09-05T10:00:47Z"
   },
   "navenpillai.com": {
     "days_left": 243,
@@ -39,7 +39,7 @@
     "expires": "2027-05-12T16:05:09Z",
     "registrar": "NameCheap, Inc.",
     "supported": true,
-    "checked_at": "2026-09-04T21:59:35Z"
+    "checked_at": "2026-09-05T10:00:48Z"
   },
   "kerja-ai.com": {
     "days_left": 164,
