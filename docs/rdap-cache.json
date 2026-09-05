@@ -4,7 +4,7 @@
     "expires": null,
     "registrar": null,
     "supported": false,
-    "checked_at": "2026-09-04T17:18:45Z"
+    "checked_at": "2026-09-05T07:00:48Z"
   },
   "magnesmarketing.com": {
     "days_left": 261,
@@ -28,11 +28,11 @@
     "checked_at": "2026-09-04T21:30:51Z"
   },
   "navenpillai.com": {
-    "days_left": 244,
+    "days_left": 243,
     "expires": "2027-05-07T03:01:58Z",
     "registrar": "GoDaddy.com, LLC",
     "supported": true,
-    "checked_at": "2026-09-04T17:18:46Z"
+    "checked_at": "2026-09-05T07:00:48Z"
   },
   "agencies.asia": {
     "days_left": 249,
