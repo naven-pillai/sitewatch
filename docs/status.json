@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-07T09:30:49Z",
+  "generated_at": "2026-09-07T10:01:01Z",
   "total": 8,
   "counts": {
     "up": 7,
@@ -13,7 +13,7 @@
       "host": "kerja-remote.com",
       "url": "https://kerja-remote.com/api/health",
       "code": 200,
-      "ms": 204,
+      "ms": 194,
       "final_url": null,
       "error": null,
       "ssl_days_left": 30,
@@ -46,13 +46,13 @@
       "note": "www.kerja-remote.com \u2014 DNS did not resolve",
       "vantages": {
         "sin1": {
-          "ms": 204,
-          "warm_ms": 100,
+          "ms": 194,
+          "warm_ms": 93,
           "code": 200,
           "error": null
         }
       },
-      "runner_ms": 574,
+      "runner_ms": 501,
       "ms_from": "sin1"
     },
     {
@@ -60,7 +60,7 @@
       "host": "agencies.asia",
       "url": "https://agencies.asia/api/health",
       "code": 200,
-      "ms": 341,
+      "ms": 702,
       "final_url": null,
       "error": null,
       "ssl_days_left": 84,
@@ -91,13 +91,13 @@
       "note": "ok",
       "vantages": {
         "sin1": {
-          "ms": 341,
-          "warm_ms": 537,
+          "ms": 702,
+          "warm_ms": 375,
           "code": 200,
           "error": null
         }
       },
-      "runner_ms": 2572,
+      "runner_ms": 1987,
       "ms_from": "sin1"
     },
     {
@@ -105,7 +105,7 @@
       "host": "businessai.my",
       "url": "https://businessai.my/api/health",
       "code": 200,
-      "ms": 194,
+      "ms": 398,
       "final_url": null,
       "error": null,
       "ssl_days_left": 66,
@@ -129,20 +129,20 @@
       "domain_days_left": null,
       "domain_expires": null,
       "domain_registrar": null,
-      "domain_rdap": false,
+      "domain_rdap": true,
       "slow_ms": 3000,
       "status": "up",
       "issues": [],
       "note": "ok",
       "vantages": {
         "sin1": {
-          "ms": 194,
-          "warm_ms": 136,
+          "ms": 398,
+          "warm_ms": 350,
           "code": 200,
           "error": null
         }
       },
-      "runner_ms": 1278,
+      "runner_ms": 1168,
       "ms_from": "sin1"
     },
     {
@@ -150,10 +150,10 @@
       "host": "kerja-ai.com",
       "url": "https://kerja-ai.com/api/health",
       "code": 200,
-      "ms": 308,
+      "ms": 280,
       "final_url": null,
       "error": null,
-      "ssl_days_left": 32,
+      "ssl_days_left": 31,
       "ssl_expires": "2026-10-09T09:45:36Z",
       "ssl_issuer": "Let's Encrypt",
       "ssl_valid": true,
@@ -181,13 +181,13 @@
       "note": "ok",
       "vantages": {
         "sin1": {
-          "ms": 308,
-          "warm_ms": 352,
+          "ms": 280,
+          "warm_ms": 403,
           "code": 200,
           "error": null
         }
       },
-      "runner_ms": 1308,
+      "runner_ms": 1035,
       "ms_from": "sin1"
     },
     {
@@ -195,7 +195,7 @@
       "host": "magnesmarketing.com",
       "url": "https://magnesmarketing.com/api/health",
       "code": 200,
-      "ms": 696,
+      "ms": 498,
       "final_url": null,
       "error": null,
       "ssl_days_left": 57,
@@ -216,9 +216,9 @@
       "sitemap_url": "https://magnesmarketing.com/sitemap.xml",
       "sitemap_code": 200,
       "sitemap_urls": 28,
-      "domain_days_left": 260,
-      "domain_expires": "2027-05-25T02:45:56Z",
-      "domain_registrar": "GoDaddy.com, LLC",
+      "domain_days_left": null,
+      "domain_expires": null,
+      "domain_registrar": null,
       "domain_rdap": true,
       "slow_ms": 3000,
       "status": "up",
@@ -226,13 +226,13 @@
       "note": "ok",
       "vantages": {
         "sin1": {
-          "ms": 696,
-          "warm_ms": 516,
+          "ms": 498,
+          "warm_ms": 422,
           "code": 200,
           "error": null
         }
       },
-      "runner_ms": 1262,
+      "runner_ms": 1292,
       "ms_from": "sin1"
     },
     {
@@ -240,7 +240,7 @@
       "host": "navenpillai.com",
       "url": "https://navenpillai.com/api/health",
       "code": 200,
-      "ms": 404,
+      "ms": 391,
       "final_url": null,
       "error": null,
       "ssl_days_left": 35,
@@ -261,9 +261,9 @@
       "sitemap_url": "https://navenpillai.com/sitemap.xml",
       "sitemap_code": 200,
       "sitemap_urls": 10,
-      "domain_days_left": 242,
-      "domain_expires": "2027-05-07T03:01:58Z",
-      "domain_registrar": "GoDaddy.com, LLC",
+      "domain_days_left": null,
+      "domain_expires": null,
+      "domain_registrar": null,
       "domain_rdap": true,
       "slow_ms": 3000,
       "status": "up",
@@ -271,13 +271,13 @@
       "note": "ok",
       "vantages": {
         "sin1": {
-          "ms": 404,
-          "warm_ms": 312,
+          "ms": 391,
+          "warm_ms": 201,
           "code": 200,
           "error": null
         }
       },
-      "runner_ms": 1563,
+      "runner_ms": 1347,
       "ms_from": "sin1"
     },
     {
@@ -285,7 +285,7 @@
       "host": "techpartner.my",
       "url": "https://techpartner.my",
       "code": 200,
-      "ms": 72,
+      "ms": 95,
       "final_url": null,
       "error": null,
       "ssl_days_left": 33,
@@ -316,13 +316,13 @@
       "note": "ok",
       "vantages": {
         "sin1": {
-          "ms": 72,
-          "warm_ms": 37,
+          "ms": 95,
+          "warm_ms": 31,
           "code": 200,
           "error": null
         }
       },
-      "runner_ms": 187,
+      "runner_ms": 163,
       "ms_from": "sin1"
     },
     {
@@ -330,7 +330,7 @@
       "host": "www.stmarkscozyhome.com",
       "url": "https://www.stmarkscozyhome.com/api/health",
       "code": 200,
-      "ms": 338,
+      "ms": 304,
       "final_url": null,
       "error": null,
       "ssl_days_left": 68,
@@ -361,13 +361,13 @@
       "note": "ok",
       "vantages": {
         "sin1": {
-          "ms": 338,
-          "warm_ms": 421,
+          "ms": 304,
+          "warm_ms": 453,
           "code": 200,
           "error": null
         }
       },
-      "runner_ms": 1055,
+      "runner_ms": 1107,
       "ms_from": "sin1"
     }
   ],
@@ -376,7 +376,7 @@
       "ok": true,
       "region": "sin1",
       "error": null,
-      "ms": 1735,
+      "ms": 1570,
       "missing": []
     }
   }
