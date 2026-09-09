@@ -4,14 +4,14 @@
     "expires": null,
     "registrar": null,
     "supported": false,
-    "checked_at": "2026-09-09T11:30:47Z"
+    "checked_at": "2026-09-09T23:30:48Z"
   },
   "magnesmarketing.com": {
     "days_left": 257,
     "expires": "2027-05-25T02:45:56Z",
     "registrar": "GoDaddy.com, LLC",
     "supported": true,
-    "checked_at": "2026-09-09T11:30:46Z"
+    "checked_at": "2026-09-09T23:30:48Z"
   },
   "stmarkscozyhome.com": {
     "days_left": 365,
@@ -32,7 +32,7 @@
     "expires": "2027-05-07T03:01:58Z",
     "registrar": "GoDaddy.com, LLC",
     "supported": true,
-    "checked_at": "2026-09-09T11:30:47Z"
+    "checked_at": "2026-09-09T23:30:48Z"
   },
   "agencies.asia": {
     "days_left": 245,
@@ -53,6 +53,6 @@
     "expires": null,
     "registrar": null,
     "supported": false,
-    "checked_at": "2026-09-09T11:30:46Z"
+    "checked_at": "2026-09-09T23:30:47Z"
   }
 }
