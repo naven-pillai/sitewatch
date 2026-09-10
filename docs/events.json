@@ -104,6 +104,13 @@
       "from": "up",
       "to": "warn",
       "note": "www.kerja-remote.com \u2014 DNS did not resolve"
+    },
+    {
+      "t": "2026-09-10T04:49:44Z",
+      "domain": "kerja-remote.com/api/health",
+      "from": "warn",
+      "to": "up",
+      "note": "ok"
     }
   ],
   "notified": {}
