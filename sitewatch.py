@@ -207,8 +207,8 @@ def check_http(url: str, timeout: float, want_body: bool) -> dict:
 def check_ssl(host: str, timeout: float, port: int = 443) -> dict:
     """Read the leaf certificate. Falls back to an unverified read so an expired
     or mismatched certificate still reports *why* it is bad."""
-    out = {"days_left": None, "expires": None, "issuer": None, "valid": None,
-           "error": None, "covers_host": None}
+    out = {"days_left": None, "expires": None, "issued": None, "issuer": None,
+           "valid": None, "error": None, "covers_host": None}
 
     def read(verify: bool):
         ctx = ssl.create_default_context()
@@ -239,6 +239,16 @@ def check_ssl(host: str, timeout: float, port: int = 443) -> dict:
             .replace(tzinfo=timezone.utc)
         out["expires"] = iso(expires)
         out["days_left"] = (expires - now()).days
+    # notBefore gives the issuing cycle, so the dashboard's meter can read
+    # days-remaining against the certificate's own lifetime instead of assuming
+    # everything is a 90-day Let's Encrypt cert. It is true of all eight domains
+    # today and would go quietly wrong the day one of them is not.
+    if cert.get("notBefore"):
+        try:
+            out["issued"] = iso(datetime.strptime(
+                cert["notBefore"], "%b %d %H:%M:%S %Y %Z").replace(tzinfo=timezone.utc))
+        except ValueError:
+            pass
     issuer = dict(x[0] for x in cert.get("issuer", ()))
     out["issuer"] = issuer.get("organizationName") or issuer.get("commonName")
     names = [v for k, v in cert.get("subjectAltName", ()) if k == "DNS"]
@@ -393,8 +403,8 @@ def classify(r: dict) -> tuple[str, list[str]]:
     return status, down + warn
 
 
-NO_TLS = {"days_left": None, "expires": None, "issuer": None, "valid": None,
-          "error": None, "covers_host": None}
+NO_TLS = {"days_left": None, "expires": None, "issued": None, "issuer": None,
+          "valid": None, "error": None, "covers_host": None}
 
 
 def check(entry: dict, timeout: float, quick: bool, rdap_cache: dict,
@@ -429,6 +439,7 @@ def check(entry: dict, timeout: float, quick: bool, rdap_cache: dict,
         "error": http["error"],
         "ssl_days_left": tls["days_left"],
         "ssl_expires": tls["expires"],
+        "ssl_issued": tls["issued"],
         "ssl_issuer": tls["issuer"],
         "ssl_valid": tls["valid"],
         "ssl_error": tls["error"],

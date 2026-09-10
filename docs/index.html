@@ -443,7 +443,19 @@
   const LABEL = { up: "Up", warn: "Warning", down: "Down" };
   const RANK  = { down: 0, warn: 1, up: 2 };
   const SLOTS = 28;          // most recent checks drawn per site
-  const CERT_CYCLE = 90;     // Let's Encrypt issues 90-day certs; meter is days/90
+  // Let's Encrypt issues 90-day certs and all eight domains use it today, so
+  // the meter reads days/90. Hardcoding that would go quietly wrong the day one
+  // domain moves to a one-year cert: the bar would sit near empty and the label
+  // would claim a cycle the certificate does not have. Derive it per row where
+  // the dates allow, and keep 90 as the fallback.
+  const CERT_CYCLE = 90;
+  const certCycle = (site) => {
+    const exp = Date.parse(site.ssl_expires || "");
+    const iss = Date.parse(site.ssl_issued || "");
+    if (!Number.isFinite(exp) || !Number.isFinite(iss)) return CERT_CYCLE;
+    const days = Math.round((exp - iss) / 86400000);
+    return days > 0 ? days : CERT_CYCLE;
+  };
 
   const state = { status: null, history: { runs: [] }, events: [], live: false,
                   q: "", onlyIssues: false, sort: "severity" };
@@ -530,12 +542,21 @@
     render();
   }
 
-  // A site that answers but warns is still serving people; only a failed
-  // check counts against availability.
-  const avail = (runs) => {
+  // A site that answers but warns is still serving people, so only a failed
+  // check counts against this. That makes "available" the wrong word for it:
+  // kerja-remote spent 197 of 340 checks in warning and still scored 100%,
+  // printed beside a strip that was visibly orange. Both were true; together
+  // they read as a lie. "Answered" is what the figure actually means, and
+  // `clean` carries the part it was quietly dropping.
+  const answeredRate = (runs) => {
     const ok = runs.filter((r) => r.s !== "down").length;
     const pct = (ok / runs.length) * 100;
     return (pct === 100 ? "100" : pct.toFixed(1)) + "%";
+  };
+  const cleanRate = (runs) => {
+    const ok = runs.filter((r) => r.s === "up").length;
+    const pct = (ok / runs.length) * 100;
+    return (pct === 100 ? "100" : pct.toFixed(0)) + "%";
   };
 
   // Fleet uptime across every recorded check. The per-row figure has always
@@ -555,14 +576,21 @@
     return { pct, total, label: (pct === 100 ? "100" : pct.toFixed(2)) + "%" };
   };
 
-  // Time since the last transition *into* down. Recoveries and warnings are
-  // not incidents; counting them would make the streak reset on good news.
+  // Time since the last transition *into* down. Recoveries are not incidents;
+  // counting them would reset the streak on good news.
+  //
+  // Warnings are counted separately rather than ignored. "No incidents in 9
+  // days" printed directly above twelve Up -> Warning rows was true — uptime
+  // counts outages only — and read as a contradiction, which costs more trust
+  // than the warnings themselves ever would.
   const sinceIncident = () => {
     const last = [...state.events].reverse().find((e) => e.to === "down");
     const from = last ? Date.parse(last.t) : Date.parse(state.history.runs[0]?.t || "");
     if (!Number.isFinite(from)) return null;
     const days = Math.floor((Date.now() - from) / 86400000);
-    return { days, ever: Boolean(last) };
+    const warned = state.events.filter(
+      (e) => e.to === "warn" && Date.parse(e.t) >= from).length;
+    return { days, ever: Boolean(last), warned };
   };
 
   // sin1 is a Vercel region code. The claim being made is geographic, so say
@@ -622,10 +650,19 @@
     // that domain's own reading.
     const fleet = Math.max(1, Math.round(
       (state.status.sites || []).length * 0.6));
+
+    // Nor is a median measured from somewhere else. Runs from before the probe
+    // existed carry the US runner's number, and plotting those beside Singapore
+    // readings drew a 4x improvement that never happened — 600-1900 ms falling
+    // to 300-500 ms is the vantage moving 15,000 km, not the sites getting
+    // faster. A run is comparable only if it recorded the vantage in use now.
+    const vantage = (state.status.sites.find((x) => x.ms_from) || {}).ms_from || null;
+    const sameVantage = (r) => !vantage
+      || Object.values(r.sites || {}).some((x) => x.v && x.v[vantage] != null);
     const series = state.history.runs.map((r) => {
       const ms = Object.values(r.sites || {})
         .map((v) => v.ms).filter((v) => typeof v === "number" && v > 0).sort((a, b) => a - b);
-      if (ms.length < fleet) return null;
+      if (ms.length < fleet || !sameVantage(r)) return null;
       const mid = Math.floor(ms.length / 2);
       return { t: r.t, v: ms.length % 2 ? ms[mid] : Math.round((ms[mid - 1] + ms[mid]) / 2) };
     }).filter(Boolean);
@@ -708,10 +745,13 @@
     // Measured from the last outage, or from the start of records when there has
     // never been one — "no incident on record" reads as *not watching*, which is
     // the opposite of the claim. Below a day, say so rather than "in 0 days".
+    const span = !streak ? null
+      : streak.days >= 1 ? `in ${streak.days} day${streak.days === 1 ? "" : "s"}`
+      : `today`;
     const streakText = !streak ? null
-      : streak.days >= 1
-        ? `no incidents in ${streak.days} day${streak.days === 1 ? "" : "s"}`
-        : `no incidents today`;
+      : streak.warned
+        ? `no outages ${span} · ${streak.warned} warning${streak.warned === 1 ? "" : "s"} resolved`
+        : `no outages ${span}`;
     $("#subline").innerHTML = worst.length
       ? `Needs attention: ` + worst.map((d) => `<b>${esc(d)}</b>`).join(", ") + `.`
       : clean && up
@@ -812,7 +852,13 @@
   }
 
   function renderChanges() {
-    const recent = state.events.slice(-12).reverse();
+    // Ten of the twelve rows here were "slow — 3008 ms" from the US-runner era,
+    // long since fixed. Old resolved noise crowding out anything current makes a
+    // healthy system look flaky, so cap by age as well as by count.
+    const CHANGE_WINDOW_DAYS = 7;
+    const cutoff = Date.now() - CHANGE_WINDOW_DAYS * 86400000;
+    const recent = state.events
+      .filter((e) => Date.parse(e.t) >= cutoff).slice(-12).reverse();
     $("#changes").hidden = recent.length === 0;
     if (!recent.length) return;
     $("#changelist").innerHTML = recent.map((e) => `<li>
@@ -851,10 +897,10 @@
               data-reg="${esc(reg || "")}" data-registrar="${esc(x.domain_registrar || "")}">
            <div class="cert-top">
              <span class="days tnum mono">${d < 0 ? "expired" : d + " days"}</span>
-             <span class="issuer">${d < 0 ? "" : "of " + CERT_CYCLE}</span>
+             <span class="issuer">${d < 0 ? "" : "of " + certCycle(x)}</span>
            </div>
            <div class="meter" data-s="${certState}">
-             <i style="width:${Math.max(2, Math.min(100, ((d < 0 ? 0 : d) / CERT_CYCLE) * 100)).toFixed(1)}%"></i>
+             <i style="width:${Math.max(2, Math.min(100, ((d < 0 ? 0 : d) / certCycle(x)) * 100)).toFixed(1)}%"></i>
            </div>
          </div>`;
 
@@ -871,7 +917,9 @@
       </div>
       <div class="checks">
         <div class="strip" role="img" aria-label="Last ${recent.length} checks for ${esc(x.domain)}">${bars}</div>
-        ${runs.length ? `<div class="availability"><b>${avail(runs)}</b> available over ${runs.length} check${runs.length === 1 ? "" : "s"}</div>` : ""}
+        ${runs.length ? `<div class="availability"><b>${answeredRate(runs)}</b> answered${
+          cleanRate(runs) === "100%" ? "" : ` · <b>${cleanRate(runs)}</b> clean`
+        } over ${runs.length} check${runs.length === 1 ? "" : "s"}</div>` : ""}
       </div>
       <div class="latency">
         <div class="latency-main">
