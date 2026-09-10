@@ -1,9 +1,12 @@
 name: sitewatch
 
+# Dispatch only. The schedule is owned by Vercel Cron (probe/api/tick.js), which
+# fires on the half hour; GitHub's own cron is deprioritised on free accounts and
+# was measured firing once in six hours against Vercel's twelve. Restoring a
+# `schedule:` block here would add unreliable duplicate runs on top of reliable
+# ones, not a safety net.
 on:
-  schedule:
-    - cron: "*/30 * * * *"   # every 30 minutes (UTC)
-  workflow_dispatch: {}       # lets you trigger it manually from the Actions tab
+  workflow_dispatch: {}       # Vercel Cron, and the Actions tab's Run workflow
 
 # Needed so the job can commit the refreshed dashboard data back to the repo.
 permissions:
@@ -42,19 +45,11 @@ jobs:
           SITEWATCH_PROBE_TOKEN: ${{ secrets.SITEWATCH_PROBE_TOKEN }}
           PROBES: ${{ vars.SITEWATCH_PROBES }}
           PROBE_PRIMARY: ${{ vars.SITEWATCH_PROBE_PRIMARY }}
-          PROBE_URL: ${{ vars.SITEWATCH_PROBE_URL }}
         run: |
           PROBE_ARGS=""
           PRIMARY=""
 
-          # The single-probe variable predates SITEWATCH_PROBES. Honour it as
-          # the sin1 entry so a half-finished migration measures from Singapore
-          # rather than silently falling back to this runner's distance.
           LIST="$PROBES"
-          if [ -z "$LIST" ] && [ -n "$PROBE_URL" ]; then
-            LIST="sin1=$PROBE_URL"
-            echo "::warning::SITEWATCH_PROBE_URL is superseded by SITEWATCH_PROBES."
-          fi
 
           for spec in $(printf '%s' "$LIST" | tr ',' ' '); do
             case "$spec" in

@@ -254,13 +254,14 @@ measured firing **6 times in 15 hours** — gaps of 110 to 296 minutes, an avera
 of 184. An outage could sit unnoticed for most of a working day, which makes
 "checked every 30 minutes" a claim the infrastructure does not keep.
 
-Two schedulers are provided. Both dispatch the workflow over the GitHub API, so
-GitHub only ever runs on an explicit dispatch. Pick one — running both just
-doubles the runs.
+So the workflow has **no `schedule:` block**. It runs on `workflow_dispatch`
+only, and something reliable owns the cadence. Two schedulers are provided; both
+dispatch over the GitHub API. Pick one — running both just doubles the runs.
 
-**Option A — Vercel Cron** (`probe/api/tick.js`). No new account, and it lives
-beside the Singapore probe in one project. Needs a paid Vercel plan; the free
-tier caps cron at once a day. Set on that project:
+**Option A — Vercel Cron** (`probe/api/tick.js`) — **currently in use.** No new
+account, and it lives beside the Singapore probe in one project. Needs a paid
+Vercel plan; the free tier caps cron at once a day. Measured over six hours it
+fired twelve times, exactly on the half hour. Set on that project:
 
 | Variable | Value |
 | -------- | ----- |
@@ -270,10 +271,11 @@ tier caps cron at once a day. Set on that project:
 
 The schedule is already declared in `probe/vercel.json`.
 
-**Option B — Cloudflare Worker** (`trigger/`). Free, and independent of Vercel —
-which matters, because Option A runs the monitoring on the same platform as the
-sites it monitors, so a Vercel incident takes out both the sites and the thing
-meant to tell you about them.
+**Option B — Cloudflare Worker** (`trigger/`) — kept as an alternative, not
+currently deployed. Free, and independent of Vercel — which matters, because
+Option A runs the monitoring on the same platform as the sites it monitors, so a
+Vercel incident takes out both the sites and the thing meant to tell you about
+them. Switch by deploying it and unsetting the Vercel Cron variables.
 
 ```
 cd trigger
@@ -294,10 +296,10 @@ Optionally `npx wrangler secret put TRIGGER_TOKEN` to enable a manual endpoint;
 without that secret the Worker's HTTP route returns 404 to everyone, so it never
 becomes something strangers can trigger.
 
-**Once the Worker is confirmed firing, delete the `schedule:` block from
-`.github/workflows/sitewatch.yml`** — leaving both means GitHub's unreliable
-cron adds duplicate runs on top of the Worker's reliable ones. Do it in that
-order, or there will be a window with nothing running at all.
+**Confirm the scheduler is firing before relying on it.** The `schedule:` block
+is already gone from the workflow, so nothing runs on a timer until one of these
+is deployed and working — check for `workflow_dispatch` runs arriving every 30
+minutes before walking away from it.
 
 ## The dashboard
 
