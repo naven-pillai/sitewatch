@@ -28,25 +28,60 @@ jobs:
       # Never fails here: the data has to be written and committed even when a
       # site is down. Whether this run counts as a failure is decided last.
       #
-      # SITEWATCH_PROBE_URL is a repository *variable*, the token a *secret*.
-      # With neither set the probe is skipped and the run works exactly as before.
+      # Vantage points come from repository *variables*, the shared token from a
+      # *secret*. Adding a region is editing SITEWATCH_PROBES — never this file:
+      #
+      #   SITEWATCH_PROBES         sin1=https://a.vercel.app/api/probe,
+      #                            iad1=https://b.vercel.app/api/probe
+      #   SITEWATCH_PROBE_PRIMARY  sin1        (optional; defaults to the first)
+      #
+      # With none of them set the probes are skipped and the run works exactly
+      # as it did before any of this existed.
       - name: Run checks
         env:
           SITEWATCH_PROBE_TOKEN: ${{ secrets.SITEWATCH_PROBE_TOKEN }}
+          PROBES: ${{ vars.SITEWATCH_PROBES }}
+          PROBE_PRIMARY: ${{ vars.SITEWATCH_PROBE_PRIMARY }}
           PROBE_URL: ${{ vars.SITEWATCH_PROBE_URL }}
         run: |
           PROBE_ARGS=""
-          if [ -n "$PROBE_URL" ]; then
-            # --probe-primary makes the Singapore reading the headline latency.
-            # This runner is in the US or Europe, so a site served from sin1 is
-            # three round trips of ocean away before it does any work — a number
-            # that describes the runner's distance, not the audience's
-            # experience, and one that trips the slow threshold on sites that
-            # are in fact fast. The runner's own reading is kept as runner_ms.
-            PROBE_ARGS="--probe sin1=$PROBE_URL --probe-primary sin1"
-            echo "Measuring latency from sin1; this runner is the fallback."
+          PRIMARY=""
+
+          # The single-probe variable predates SITEWATCH_PROBES. Honour it as
+          # the sin1 entry so a half-finished migration measures from Singapore
+          # rather than silently falling back to this runner's distance.
+          LIST="$PROBES"
+          if [ -z "$LIST" ] && [ -n "$PROBE_URL" ]; then
+            LIST="sin1=$PROBE_URL"
+            echo "::warning::SITEWATCH_PROBE_URL is superseded by SITEWATCH_PROBES."
+          fi
+
+          for spec in $(printf '%s' "$LIST" | tr ',' ' '); do
+            case "$spec" in
+              *=*)
+                PROBE_ARGS="$PROBE_ARGS --probe $spec"
+                [ -z "$PRIMARY" ] && PRIMARY="${spec%%=*}"
+                ;;
+              *)
+                echo "::warning::ignoring probe spec '$spec' — expected NAME=URL"
+                ;;
+            esac
+          done
+
+          # The headline latency is one region's. This runner is in the US or
+          # Europe, so a site served from Singapore is three round trips of
+          # ocean away before it does any work — a number that describes the
+          # runner's distance, not the audience's experience, and one that trips
+          # the slow threshold on sites that are in fact fast. Every other
+          # vantage is still recorded per row, and the runner's own reading is
+          # kept as runner_ms.
+          [ -n "$PROBE_PRIMARY" ] && PRIMARY="$PROBE_PRIMARY"
+
+          if [ -n "$PROBE_ARGS" ]; then
+            PROBE_ARGS="$PROBE_ARGS --probe-primary $PRIMARY"
+            echo "Vantages:$PROBE_ARGS"
           else
-            echo "No SITEWATCH_PROBE_URL set — checking from this runner only."
+            echo "No SITEWATCH_PROBES set — checking from this runner only."
             echo "Latency will reflect US/EU distance, not Malaysian visitors."
           fi
           python sitewatch.py --out docs --alert-payload alert.json \

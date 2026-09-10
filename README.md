@@ -198,9 +198,39 @@ query is slow", which is a database problem and needs a different fix.
 2. Set two environment variables on that project:
    - `SITEWATCH_PROBE_TOKEN` — any long random string.
    - `SITEWATCH_TARGETS` — run `python3 sitewatch.py --print-targets` and paste.
-3. In this repo's settings, add variable `SITEWATCH_PROBE_URL`
-   (`https://<your-probe>.vercel.app/api/probe`) and secret `SITEWATCH_PROBE_TOKEN`
-   with the same value as step 2.
+3. In this repo's settings, add variable `SITEWATCH_PROBES` and secret
+   `SITEWATCH_PROBE_TOKEN` (the same value as step 2):
+
+   | Setting | Kind | Value |
+   | ------- | ---- | ----- |
+   | `SITEWATCH_PROBES` | variable | `sin1=https://<your-probe>.vercel.app/api/probe` |
+   | `SITEWATCH_PROBE_PRIMARY` | variable | `sin1` — optional, defaults to the first |
+   | `SITEWATCH_PROBE_TOKEN` | secret | the token from step 2 |
+
+### Adding more vantage points
+
+`SITEWATCH_PROBES` is a comma-separated list of `region=url` pairs, so a second
+region is one more Vercel project and one edited variable — never a code change:
+
+```
+sin1=https://sitewatch-probe.vercel.app/api/probe,
+iad1=https://sitewatch-probe-iad.vercel.app/api/probe,
+fra1=https://sitewatch-probe-fra.vercel.app/api/probe
+```
+
+Repeat the deploy above per region, changing only the `regions` array in that
+project's `probe/vercel.json`. Every row then carries a reading per region, and
+`history.json` keeps them per run, so each region gets its own trend.
+
+`SITEWATCH_PROBE_PRIMARY` picks which one supplies the headline latency and is
+judged by the slow threshold. The rest are recorded alongside it. Naming a
+region that is not in the list fails the run rather than quietly falling back to
+the runner's number — a silent fallback is how a dashboard ends up reporting
+US latency while claiming to report Singapore's.
+
+All probes share the one `SITEWATCH_PROBE_TOKEN`, so set the same token on every
+project. A probe whose target list drifts from `domains.txt` is reported by name
+in the run summary rather than going quiet about the sites it stopped covering.
 
 Locally, or on a VPS somewhere Vercel has no region — Kuala Lumpur, say:
 
