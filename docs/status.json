@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-12T18:00:48Z",
+  "generated_at": "2026-09-12T18:30:49Z",
   "total": 8,
   "counts": {
     "up": 8,
@@ -13,7 +13,7 @@
       "host": "agencies.asia",
       "url": "https://agencies.asia/api/health",
       "code": 200,
-      "ms": 300,
+      "ms": 518,
       "final_url": null,
       "error": null,
       "ssl_days_left": 79,
@@ -45,13 +45,13 @@
       "note": "ok",
       "vantages": {
         "sin1": {
-          "ms": 300,
-          "warm_ms": 924,
+          "ms": 518,
+          "warm_ms": 572,
           "code": 200,
           "error": null
         }
       },
-      "runner_ms": 2605,
+      "runner_ms": 2507,
       "ms_from": "sin1"
     },
     {
@@ -59,7 +59,7 @@
       "host": "businessai.my",
       "url": "https://businessai.my/api/health",
       "code": 200,
-      "ms": 423,
+      "ms": 329,
       "final_url": null,
       "error": null,
       "ssl_days_left": 60,
@@ -91,13 +91,13 @@
       "note": "ok",
       "vantages": {
         "sin1": {
-          "ms": 423,
-          "warm_ms": 140,
+          "ms": 329,
+          "warm_ms": 226,
           "code": 200,
           "error": null
         }
       },
-      "runner_ms": 1331,
+      "runner_ms": 1167,
       "ms_from": "sin1"
     },
     {
@@ -105,7 +105,7 @@
       "host": "kerja-ai.com",
       "url": "https://kerja-ai.com/api/health",
       "code": 200,
-      "ms": 308,
+      "ms": 261,
       "final_url": null,
       "error": null,
       "ssl_days_left": 87,
@@ -137,13 +137,13 @@
       "note": "ok",
       "vantages": {
         "sin1": {
-          "ms": 308,
-          "warm_ms": 492,
+          "ms": 261,
+          "warm_ms": 307,
           "code": 200,
           "error": null
         }
       },
-      "runner_ms": 1310,
+      "runner_ms": 2210,
       "ms_from": "sin1"
     },
     {
@@ -151,7 +151,7 @@
       "host": "kerja-remote.com",
       "url": "https://kerja-remote.com/api/health",
       "code": 200,
-      "ms": 221,
+      "ms": 239,
       "final_url": null,
       "error": null,
       "ssl_days_left": 86,
@@ -178,13 +178,13 @@
       "note": "ok",
       "vantages": {
         "sin1": {
-          "ms": 221,
-          "warm_ms": 83,
+          "ms": 239,
+          "warm_ms": 90,
           "code": 200,
           "error": null
         }
       },
-      "runner_ms": 675,
+      "runner_ms": 605,
       "ms_from": "sin1"
     },
     {
@@ -192,7 +192,7 @@
       "host": "magnesmarketing.com",
       "url": "https://magnesmarketing.com/api/health",
       "code": 200,
-      "ms": 432,
+      "ms": 347,
       "final_url": null,
       "error": null,
       "ssl_days_left": 52,
@@ -224,13 +224,13 @@
       "note": "ok",
       "vantages": {
         "sin1": {
-          "ms": 432,
-          "warm_ms": 146,
+          "ms": 347,
+          "warm_ms": 143,
           "code": 200,
           "error": null
         }
       },
-      "runner_ms": 1313,
+      "runner_ms": 1186,
       "ms_from": "sin1"
     },
     {
@@ -238,7 +238,7 @@
       "host": "navenpillai.com",
       "url": "https://navenpillai.com/api/health",
       "code": 200,
-      "ms": 507,
+      "ms": 350,
       "final_url": null,
       "error": null,
       "ssl_days_left": 29,
@@ -270,13 +270,13 @@
       "note": "ok",
       "vantages": {
         "sin1": {
-          "ms": 507,
-          "warm_ms": 379,
+          "ms": 350,
+          "warm_ms": 203,
           "code": 200,
           "error": null
         }
       },
-      "runner_ms": 2345,
+      "runner_ms": 1839,
       "ms_from": "sin1"
     },
     {
@@ -284,7 +284,7 @@
       "host": "techpartner.my",
       "url": "https://techpartner.my",
       "code": 200,
-      "ms": 105,
+      "ms": 154,
       "final_url": null,
       "error": null,
       "ssl_days_left": 83,
@@ -316,13 +316,13 @@
       "note": "ok",
       "vantages": {
         "sin1": {
-          "ms": 105,
-          "warm_ms": 24,
+          "ms": 154,
+          "warm_ms": 43,
           "code": 200,
           "error": null
         }
       },
-      "runner_ms": 151,
+      "runner_ms": 166,
       "ms_from": "sin1"
     },
     {
@@ -330,7 +330,7 @@
       "host": "www.stmarkscozyhome.com",
       "url": "https://www.stmarkscozyhome.com/api/health",
       "code": 200,
-      "ms": 275,
+      "ms": 667,
       "final_url": null,
       "error": null,
       "ssl_days_left": 63,
@@ -362,13 +362,13 @@
       "note": "ok",
       "vantages": {
         "sin1": {
-          "ms": 275,
-          "warm_ms": 202,
+          "ms": 667,
+          "warm_ms": 147,
           "code": 200,
           "error": null
         }
       },
-      "runner_ms": 1275,
+      "runner_ms": 1092,
       "ms_from": "sin1"
     }
   ],
@@ -377,7 +377,7 @@
       "ok": true,
       "region": "sin1",
       "error": null,
-      "ms": 1626,
+      "ms": 1550,
       "missing": []
     }
   }
