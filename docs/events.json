@@ -118,9 +118,14 @@
       "from": "up",
       "to": "down",
       "note": "server error 503"
+    },
+    {
+      "t": "2026-09-13T10:30:51Z",
+      "domain": "kerja-ai.com/api/health",
+      "from": "down",
+      "to": "up",
+      "note": "ok"
     }
   ],
-  "notified": {
-    "kerja-ai.com/api/health": "2026-09-13T10:01:02Z"
-  }
+  "notified": {}
 }
