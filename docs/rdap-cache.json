@@ -39,7 +39,7 @@
     "expires": "2027-05-12T16:05:09Z",
     "registrar": "NameCheap, Inc.",
     "supported": true,
-    "checked_at": "2026-09-13T02:30:48Z"
+    "checked_at": "2026-09-13T14:30:50Z"
   },
   "kerja-ai.com": {
     "days_left": 155,
@@ -53,6 +53,6 @@
     "expires": null,
     "registrar": null,
     "supported": false,
-    "checked_at": "2026-09-13T02:00:47Z"
+    "checked_at": "2026-09-13T14:30:46Z"
   }
 }
