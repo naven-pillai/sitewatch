@@ -11,7 +11,7 @@
     "expires": "2027-05-25T02:45:56Z",
     "registrar": "GoDaddy.com, LLC",
     "supported": true,
-    "checked_at": "2026-09-16T03:30:47Z"
+    "checked_at": "2026-09-16T15:30:51Z"
   },
   "stmarkscozyhome.com": {
     "days_left": 358,
@@ -32,7 +32,7 @@
     "expires": "2027-05-07T03:01:58Z",
     "registrar": "GoDaddy.com, LLC",
     "supported": true,
-    "checked_at": "2026-09-16T03:30:48Z"
+    "checked_at": "2026-09-16T15:30:51Z"
   },
   "agencies.asia": {
     "days_left": 238,
@@ -53,6 +53,6 @@
     "expires": null,
     "registrar": null,
     "supported": false,
-    "checked_at": "2026-09-16T03:30:46Z"
+    "checked_at": "2026-09-16T15:30:50Z"
   }
 }
